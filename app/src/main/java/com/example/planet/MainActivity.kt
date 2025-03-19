@@ -15,26 +15,301 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
-
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Path
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
+                HomeScreen()
                 QuizQuestionScreen()
+                BottomNavigationBar()
             }
         }
     }
 }
 
 @Preview(showBackground = true)
+@Composable
+fun HomeScreen() {
+
+    val pretendardsemibold = FontFamily(
+        Font(R.font.pretendardsemibold)
+    )
+    val pretendardbold = FontFamily(
+        Font(R.font.pretendardbold)
+    )
+
+    Scaffold(
+        bottomBar = {
+            BottomNavigationBar()
+        }
+    ) { innerPadding ->
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFC2E38E))
+                .padding(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 70.dp,
+                    bottom = innerPadding.calculateBottomPadding() // <- 하단 패딩 보정!
+                )
+        ) {
+
+            // ======= 출석 헤더 =======
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "🌞 연속 7일 출석하고 있어요!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontSize = 12.sp,
+                    fontFamily = pretendardsemibold
+                )
+                Text(
+                    text = "89 P",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontSize = 17.sp,
+                    fontFamily = pretendardsemibold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ======= 최근 퀴즈 박스 =======
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFCCD5)),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "RECENT QUIZ",
+                        color = Color.Gray,
+                        fontSize = 12.06.sp,
+                        fontFamily = pretendardsemibold,
+                        modifier = Modifier.padding(start = 15.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 15.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "첫 문제를 풀어보세요! >>",
+                            color = Color(0xFF660012),
+                            fontSize = 16.64.sp,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontFamily = pretendardbold
+                        )
+                        Text(
+                            text = "0%",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontFamily = pretendardsemibold
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ======= 순위 박스 =======
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFCCEAFF)),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "내 등수",
+                            fontSize = 13.sp,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "# 6",
+                            fontSize = 15.sp,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontFamily = pretendardbold
+                        )
+                    }
+
+                    HorizontalDivider(
+                        color = Color.LightGray,
+                        modifier = Modifier
+                            .height(40.dp)
+                            .width(1.dp)
+                    )
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "학교 점수",
+                            fontSize = 13.sp,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "# 14",
+                            fontSize = 15.sp,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontFamily = pretendardbold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BottomNavigationBar(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(80.dp) // 네비게이션 바 높이
+            .background(Color.Transparent) // 배경 투명
+    ) {
+        // ✅ 네비게이션 바의 배경 (라운드 처리 + 파인 부분)
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(80.dp)
+        ) {
+            val width = size.width
+            val height = size.height
+            val radius = 40.dp.toPx() // 곡선 반경
+            val cutoutRadius = 60.dp.toPx()      // 가운데 파인 부분 넓이 조절
+            val curveDepth = 40.dp.toPx()        // 아래로 파인 깊이
+
+            val cornerRadius = radius // 바깥 모서리 둥글기
+            val innerRadius = radius / 2 // 가운데 파인 부분의 모서리 둥글기
+
+            drawPath(
+                path = Path().apply {
+                    // 왼쪽 상단 둥근 모서리 시작
+                    moveTo(0f, cornerRadius)
+                    quadraticBezierTo(0f, 0f, cornerRadius, 0f)
+
+                    // ➡️ 직선 부분 (유지!)
+                    lineTo(width / 2 - radius - innerRadius, 0f)
+
+                    // 🔵 직선과 곡선이 만나는 지점 부드럽게 (곡선으로 약간의 둥글기 추가)
+                    quadraticBezierTo(
+                        width / 2 - radius,
+                        0f,
+                        width / 2 - radius,
+                        innerRadius
+                    )
+
+                    // 가운데 아래로 파인 부분
+                    quadraticBezierTo(
+                        width / 2,
+                        radius * 2,
+                        width / 2 + radius,
+                        innerRadius
+                    )
+
+                    // 오른쪽 부드럽게 다시 직선으로 (곡선 처리)
+                    quadraticBezierTo(
+                        width / 2 + radius,
+                        0f,
+                        width / 2 + radius + innerRadius,
+                        0f
+                    )
+
+                    // ➡️ 직선 부분 (유지!)
+                    lineTo(width - cornerRadius, 0f)
+
+                    // 오른쪽 상단 둥근 모서리
+                    quadraticBezierTo(width, 0f, width, cornerRadius)
+
+                    // 하단 경로 닫기
+                    lineTo(width, height)
+                    lineTo(0f, height)
+
+                    close()
+                },
+                color = Color.White
+            )
+        }
+
+        // ✅ 네비게이션 아이콘들
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 40.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NavItem(icon = Icons.Default.Home, isSelected = true)
+            NavItem(icon = Icons.Default.School, isSelected = false)
+            Spacer(modifier = Modifier.width(50.dp)) // 카메라 버튼 공간 확보
+            NavItem(icon = Icons.Default.BarChart, isSelected = false)
+            NavItem(icon = Icons.Default.Person, isSelected = false)
+        }
+
+        // ✅ 카메라 버튼 (플로팅 느낌)
+        FloatingActionButton(
+            onClick = { /* TODO: 카메라 기능 연결 */ },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = (-28).dp), // 위로 띄우기
+            containerColor = Color(0xFFC2E38E) // 연두색 배경
+        ) {
+            Icon(
+                imageVector = Icons.Default.CameraAlt,
+                contentDescription = "카메라",
+                tint = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+fun NavItem(icon: ImageVector, isSelected: Boolean) {
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = if (isSelected) Color(0xFF000000) else Color(0xFFCCCCCC),
+        modifier = Modifier.size(24.dp)
+    )
+}
+
+//@Preview(showBackground = true)
 @Composable
 fun QuizQuestionScreen() {
 
@@ -153,3 +428,4 @@ fun QuizQuestionScreen() {
 
     }
 }}
+
