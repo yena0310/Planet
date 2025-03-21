@@ -65,7 +65,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.material.icons.extended)
 
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)

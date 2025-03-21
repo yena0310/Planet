@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,12 +25,17 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Path
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,12 +45,13 @@ class MainActivity : ComponentActivity() {
                 HomeScreen()
                 QuizQuestionScreen()
                 BottomNavigationBar()
+                StudyQuizPage()
             }
         }
     }
 }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable
 fun HomeScreen() {
 
@@ -194,6 +199,300 @@ fun HomeScreen() {
         }
     }
 }
+
+@Preview(showBackground = true)
+@Composable
+fun StudyQuizPage() {
+    val pretendardsemibold = FontFamily(
+        Font(R.font.pretendardsemibold)
+    )
+    val pretendardbold = FontFamily(
+        Font(R.font.pretendardbold)
+    )
+
+    Scaffold(
+        bottomBar = {
+            BottomNavigationBar()
+        }
+    ) { _ ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFC2E38E))
+                .padding(0.dp)
+                .verticalScroll(rememberScrollState()) // 스크롤 추가
+        ) {
+            // ====== 상단 아이템 ======
+            Spacer(modifier = Modifier.height(70.dp))
+
+            // ===== 출석 헤더 =====
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "89 P",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontSize = 17.sp,
+                    fontFamily = pretendardsemibold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ===== 최근 퀴즈 박스 =====
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFCCD5)),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .height(80.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "RECENT QUIZ",
+                        color = Color.Gray,
+                        fontSize = 12.06.sp,
+                        fontFamily = pretendardsemibold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "이어서 풀기 >>",
+                            color = Color(0xFF660012),
+                            fontSize = 16.64.sp,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontFamily = pretendardbold
+                        )
+                        Text(
+                            text = "65%",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontFamily = pretendardsemibold
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ===== 틀린 문제 복습 박스 =====
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFCCEAFF)),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .height(60.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                )
+                {
+                    Text(
+                        text = "틀렸던 문제를 다시 풀어볼까요 ? >>",
+                        fontSize = 19.sp,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontFamily = pretendardbold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ===== Study Quizzes 흰색 박스 =====
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .padding(horizontal = 20.dp)
+
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp)
+                ) {
+
+                    // ===== 타이틀 =====
+                    Text(
+                        text = "Study Quizzes",
+                        fontSize = 20.sp,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontFamily = pretendardbold,
+                        color = Color.Black
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // ===== Chapter 1 =====
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF3C3A4A)),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "1",
+                                fontSize = 20.sp,
+                                fontFamily = pretendardbold,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "Chapter 1",
+                                    fontSize = 16.sp,
+                                    fontFamily = pretendardbold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "100 문제 | 완료!",
+                                    fontSize = 14.sp,
+                                    fontFamily = pretendardsemibold,
+                                    color = Color.White
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = "Next",
+                                tint = Color.White
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // ===== Chapter 2 =====
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF4F2FF)),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "2",
+                                fontSize = 20.sp,
+                                fontFamily = pretendardbold,
+                                color = Color(0xFF5C50D2)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "Chapter 2",
+                                    fontSize = 16.sp,
+                                    fontFamily = pretendardbold,
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "100 문제",
+                                    fontSize = 14.sp,
+                                    fontFamily = pretendardsemibold,
+                                    color = Color.Gray
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = "Next",
+                                tint = Color.Gray
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // ===== Chapter 3 =====
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF4F2FF)),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "3",
+                                fontSize = 20.sp,
+                                fontFamily = pretendardbold,
+                                color = Color(0xFF5C50D2)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "Chapter 3",
+                                    fontSize = 16.sp,
+                                    fontFamily = pretendardbold,
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "100 문제",
+                                    fontSize = 14.sp,
+                                    fontFamily = pretendardsemibold,
+                                    color = Color.Gray
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = "Next",
+                                tint = Color.Gray
+                            )
+                        }
+                    }
+
+                } // Column 끝
+            } // Card 끝
+
+        } // Column 끝
+    } // Scaffold 끝
+}
+
+
+
 
 @Composable
 fun BottomNavigationBar(modifier: Modifier = Modifier) {
