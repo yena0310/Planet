@@ -34,6 +34,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Path
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
+
+
 
 
 
@@ -55,12 +67,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun HomeScreen() {
 
-    val pretendardsemibold = FontFamily(
-        Font(R.font.pretendardsemibold)
-    )
-    val pretendardbold = FontFamily(
-        Font(R.font.pretendardbold)
-    )
+    val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
+    val pretendardbold = FontFamily(Font(R.font.pretendardbold))
 
     Scaffold(
         bottomBar = {
@@ -71,12 +79,12 @@ fun HomeScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFC2E38E))
+                .background(Color(0xFFCAEBF1))
                 .padding(
                     start = 20.dp,
                     end = 20.dp,
                     top = 70.dp,
-                    bottom = innerPadding.calculateBottomPadding() // <- 하단 패딩 보정!
+                    bottom = innerPadding.calculateBottomPadding()
                 )
         ) {
 
@@ -102,13 +110,17 @@ fun HomeScreen() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ======= 최근 퀴즈 박스 =======
+            // ======= 최근 퀴즈 박스 (버튼 + 그림자 + TODO 이동) =======
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFCCD5)),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
                 shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp)
+                    .clickable {
+                        // TODO: 페이지 이동 처리 (예: navController.navigate("quizPage"))
+                    }
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -125,13 +137,13 @@ fun HomeScreen() {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 15.dp),
+                            .padding(start = 15.dp, end = 15.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "첫 문제를 풀어보세요! >>",
-                            color = Color(0xFF660012),
+                            color = Color(0xFF546A6E),
                             fontSize = 16.64.sp,
                             style = MaterialTheme.typography.titleMedium,
                             fontFamily = pretendardbold
@@ -147,10 +159,11 @@ fun HomeScreen() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ======= 순위 박스 =======
+            // ======= 순위 박스 (그림자 + 텍스트 색상 수정 + 구분선 추가) =======
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFCCEAFF)),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
                 shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp)
@@ -164,34 +177,39 @@ fun HomeScreen() {
                         Text(
                             text = "내 등수",
                             fontSize = 13.sp,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF284449)
                         )
                         Text(
                             text = "# 6",
                             fontSize = 15.sp,
                             style = MaterialTheme.typography.titleLarge,
-                            fontFamily = pretendardbold
+                            fontFamily = pretendardbold,
+                            color = Color(0xFF284449)
                         )
                     }
 
-                    HorizontalDivider(
-                        color = Color.LightGray,
+                    // 👉 중앙 세로 구분선
+                    Box(
                         modifier = Modifier
-                            .height(40.dp)
-                            .width(1.dp)
+                            .width(1.dp)               // 세로선이므로 width는 얇게
+                            .height(30.dp)             // 높이는 원하는 만큼
+                            .background(Color.LightGray)
                     )
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "학교 점수",
                             fontSize = 13.sp,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF284449)
                         )
                         Text(
                             text = "# 14",
                             fontSize = 15.sp,
                             style = MaterialTheme.typography.titleLarge,
-                            fontFamily = pretendardbold
+                            fontFamily = pretendardbold,
+                            color = Color(0xFF284449)
                         )
                     }
                 }
@@ -200,39 +218,43 @@ fun HomeScreen() {
     }
 }
 
+
 @Preview(showBackground = true)
 @Composable
 fun StudyQuizPage() {
-    val pretendardsemibold = FontFamily(
-        Font(R.font.pretendardsemibold)
-    )
-    val pretendardbold = FontFamily(
-        Font(R.font.pretendardbold)
-    )
+    val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
+    val pretendardbold = FontFamily(Font(R.font.pretendardbold))
 
     Scaffold(
         bottomBar = {
             BottomNavigationBar()
         }
-    ) { _ ->
+    ) { innerPadding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFC2E38E))
-                .padding(0.dp)
-                .verticalScroll(rememberScrollState()) // 스크롤 추가
+                .background(Color(0xFFCAEBF1))
+                .padding(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 70.dp
+                    //bottom = innerPadding.calculateBottomPadding()
+                )
         ) {
-            // ====== 상단 아이템 ======
-            Spacer(modifier = Modifier.height(70.dp))
 
-            // ===== 출석 헤더 =====
+            // ======= 출석 헤더 =======
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Text(
+                    text = "🌞 연속 7일 출석하고 있어요!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontSize = 14.sp,
+                    fontFamily = pretendardsemibold
+                )
                 Text(
                     text = "89 P",
                     style = MaterialTheme.typography.titleLarge,
@@ -243,14 +265,18 @@ fun StudyQuizPage() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ===== 최근 퀴즈 박스 =====
+            // ======= 최근 퀴즈 박스 =======
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFCCD5)),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
                 shape = RoundedCornerShape(20.dp),
+                //elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
                     .height(80.dp)
+                    .customShadow()
+                    .clickable {
+                        // TODO: navController.navigate("quizPage")
+                    }
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -260,23 +286,26 @@ fun StudyQuizPage() {
                         text = "RECENT QUIZ",
                         color = Color.Gray,
                         fontSize = 12.06.sp,
-                        fontFamily = pretendardsemibold
+                        fontFamily = pretendardsemibold,
+                        modifier = Modifier.padding(start = 15.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 15.dp, end = 15.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "이어서 풀기 >>",
-                            color = Color(0xFF660012),
-                            fontSize = 16.64.sp,
+                            color = Color(0xFF546A6E),
+                            fontSize = 18.sp,
                             style = MaterialTheme.typography.titleMedium,
                             fontFamily = pretendardbold
                         )
                         Text(
-                            text = "65%",
+                            text = "0%",
                             style = MaterialTheme.typography.titleMedium,
                             fontFamily = pretendardsemibold
                         )
@@ -286,223 +315,163 @@ fun StudyQuizPage() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ===== 틀린 문제 복습 박스 =====
+            // ======= 틀린문제 복습 박스 =======
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFCCEAFF)),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
                 shape = RoundedCornerShape(20.dp),
+                //elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
                     .height(60.dp)
+                    .customShadow()
+                    .clickable { /*TODO*/ }
             ) {
                 Row(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                )
-                {
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 30.dp),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(
-                        text = "틀렸던 문제를 다시 풀어볼까요 ? >>",
-                        fontSize = 19.sp,
-                        style = MaterialTheme.typography.titleLarge,
+                        text = "틀렸던 문제를 다시 풀어볼까요?  >>",
+                        color = Color(0xFF546A6E),
+                        fontSize = 18.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontFamily = pretendardbold
                     )
-                }
-            }
+                }}
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ===== Study Quizzes 흰색 박스 =====
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+            // ===== 흰색 박스 =====
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight()
-                    .padding(horizontal = 20.dp)
-
+                    .background(
+                        color = Color.White,
+                        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
+                    )
+                    .padding(bottom = innerPadding.calculateBottomPadding())
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .verticalScroll(rememberScrollState()) // ← 스크롤 적용
                         .padding(24.dp)
                 ) {
-
-                    // ===== 타이틀 =====
                     Text(
                         text = "Study Quizzes",
                         fontSize = 20.sp,
-                        style = MaterialTheme.typography.titleLarge,
                         fontFamily = pretendardbold,
-                        color = Color.Black
+                        color = Color(0xFF546A6E) // 변경된 제목 색상
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // ===== Chapter 1 =====
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF3C3A4A)),
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                    ) {
-                        Row(
+                    listOf(
+                        Triple("1", "Chapter 1", "20 문제 | 완료!"),
+                        Triple("2", "Chapter 2", "20 문제"),
+                        Triple("3", "Chapter 3", "20 문제"),
+                        Triple("4", "Chapter 4", "20 문제"),
+                        Triple("5", "Chapter 5", "20 문제")
+                    ).forEachIndexed { index, (number, title, subtitle) ->
+
+                        val isCompleted = index == 0
+
+                        val backgroundColor = if (isCompleted) Color(0xFF4E4E58) else Color.White
+                        val borderColor = if (isCompleted) Color.Transparent else Color(0xFFB9DEE4)
+
+// ✅ 글씨 색상 - Chapter 1만 따로 분기
+                        val titleColor = if (isCompleted) Color(0xFFC2EFF7) else Color(0xFF546A6E)
+                        val subtitleColor = if (isCompleted) Color(0xFF95D0DB) else Color(0xFF858494)
+
+                        val iconTint = Color(0xFF53AEBE)
+
+                        Button(
+                            onClick = { /* TODO: Chapter 이동 */ },
+                            colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
+                            shape = RoundedCornerShape(20.dp),
+                            contentPadding = PaddingValues(),
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "1",
-                                fontSize = 20.sp,
-                                fontFamily = pretendardbold,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = "Chapter 1",
-                                    fontSize = 16.sp,
-                                    fontFamily = pretendardbold,
-                                    color = Color.White
+                                .fillMaxWidth()
+                                .height(80.dp)
+                                .border(
+                                    width = 2.dp,
+                                    color = borderColor,
+                                    shape = RoundedCornerShape(20.dp)
                                 )
-                                Text(
-                                    text = "100 문제 | 완료!",
-                                    fontSize = 14.sp,
-                                    fontFamily = pretendardsemibold,
-                                    color = Color.White
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 11.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .background(Color(0xFF53AEBE), shape = RoundedCornerShape(17.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = number,
+                                        fontSize = 27.sp,
+                                        fontFamily = pretendardbold,
+                                        color = Color.White
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(16.dp))
+
+                                Column {
+                                    Text(
+                                        text = title,
+                                        fontSize = 16.sp,
+                                        fontFamily = pretendardbold,
+                                        color = titleColor
+                                    )
+                                    Text(
+                                        text = subtitle,
+                                        fontSize = 14.sp,
+                                        fontFamily = pretendardsemibold,
+                                        color = subtitleColor
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                Icon(
+                                    imageVector = Icons.Default.ArrowForward,
+                                    contentDescription = "Next",
+                                    tint = iconTint
                                 )
                             }
-                            Spacer(modifier = Modifier.weight(1f))
-                            Icon(
-                                imageVector = Icons.Default.ArrowForward,
-                                contentDescription = "Next",
-                                tint = Color.White
-                            )
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                     }
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // ===== Chapter 2 =====
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF4F2FF)),
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "2",
-                                fontSize = 20.sp,
-                                fontFamily = pretendardbold,
-                                color = Color(0xFF5C50D2)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = "Chapter 2",
-                                    fontSize = 16.sp,
-                                    fontFamily = pretendardbold,
-                                    color = Color.Black
-                                )
-                                Text(
-                                    text = "100 문제",
-                                    fontSize = 14.sp,
-                                    fontFamily = pretendardsemibold,
-                                    color = Color.Gray
-                                )
-                            }
-                            Spacer(modifier = Modifier.weight(1f))
-                            Icon(
-                                imageVector = Icons.Default.ArrowForward,
-                                contentDescription = "Next",
-                                tint = Color.Gray
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // ===== Chapter 3 =====
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF4F2FF)),
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "3",
-                                fontSize = 20.sp,
-                                fontFamily = pretendardbold,
-                                color = Color(0xFF5C50D2)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = "Chapter 3",
-                                    fontSize = 16.sp,
-                                    fontFamily = pretendardbold,
-                                    color = Color.Black
-                                )
-                                Text(
-                                    text = "100 문제",
-                                    fontSize = 14.sp,
-                                    fontFamily = pretendardsemibold,
-                                    color = Color.Gray
-                                )
-                            }
-                            Spacer(modifier = Modifier.weight(1f))
-                            Icon(
-                                imageVector = Icons.Default.ArrowForward,
-                                contentDescription = "Next",
-                                tint = Color.Gray
-                            )
-                        }
-                    }
-
-                } // Column 끝
-            } // Card 끝
-
-        } // Column 끝
-    } // Scaffold 끝
-}
-
-
-
+        }
+    }}
 
 @Composable
 fun BottomNavigationBar(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(80.dp) // 네비게이션 바 높이
-            .background(Color.Transparent) // 배경 투명
+            .height(80.dp)
+            .shadow(
+                elevation = 25.dp,
+                shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+                clip = false
+            )
+            .background(Color.Transparent)
     ) {
-        // ✅ 네비게이션 바의 배경 (라운드 처리 + 파인 부분)
+        // ✅ 네비게이션 바 배경 (상단 라운드)
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -510,63 +479,23 @@ fun BottomNavigationBar(modifier: Modifier = Modifier) {
         ) {
             val width = size.width
             val height = size.height
-            val radius = 40.dp.toPx() // 곡선 반경
-            val cutoutRadius = 60.dp.toPx()      // 가운데 파인 부분 넓이 조절
-            val curveDepth = 40.dp.toPx()        // 아래로 파인 깊이
-
-            val cornerRadius = radius // 바깥 모서리 둥글기
-            val innerRadius = radius / 2 // 가운데 파인 부분의 모서리 둥글기
+            val cornerRadius = 40.dp.toPx()
 
             drawPath(
                 path = Path().apply {
-                    // 왼쪽 상단 둥근 모서리 시작
                     moveTo(0f, cornerRadius)
                     quadraticBezierTo(0f, 0f, cornerRadius, 0f)
-
-                    // ➡️ 직선 부분 (유지!)
-                    lineTo(width / 2 - radius - innerRadius, 0f)
-
-                    // 🔵 직선과 곡선이 만나는 지점 부드럽게 (곡선으로 약간의 둥글기 추가)
-                    quadraticBezierTo(
-                        width / 2 - radius,
-                        0f,
-                        width / 2 - radius,
-                        innerRadius
-                    )
-
-                    // 가운데 아래로 파인 부분
-                    quadraticBezierTo(
-                        width / 2,
-                        radius * 2,
-                        width / 2 + radius,
-                        innerRadius
-                    )
-
-                    // 오른쪽 부드럽게 다시 직선으로 (곡선 처리)
-                    quadraticBezierTo(
-                        width / 2 + radius,
-                        0f,
-                        width / 2 + radius + innerRadius,
-                        0f
-                    )
-
-                    // ➡️ 직선 부분 (유지!)
                     lineTo(width - cornerRadius, 0f)
-
-                    // 오른쪽 상단 둥근 모서리
                     quadraticBezierTo(width, 0f, width, cornerRadius)
-
-                    // 하단 경로 닫기
                     lineTo(width, height)
                     lineTo(0f, height)
-
                     close()
                 },
                 color = Color.White
             )
         }
 
-        // ✅ 네비게이션 아이콘들
+        // ✅ 아이콘 버튼들
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -574,39 +503,105 @@ fun BottomNavigationBar(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            NavItem(icon = Icons.Default.Home, isSelected = true)
-            NavItem(icon = Icons.Default.School, isSelected = false)
-            Spacer(modifier = Modifier.width(50.dp)) // 카메라 버튼 공간 확보
-            NavItem(icon = Icons.Default.BarChart, isSelected = false)
-            NavItem(icon = Icons.Default.Person, isSelected = false)
+            NavItem(
+                icon = Icons.Default.Home,
+                isSelected = true,
+                iconSize = 28.dp,
+                onClick = {
+                    // TODO: navController.navigate("homePage")
+                }
+            )
+
+            NavItem(
+                icon = Icons.Default.School,
+                isSelected = false,
+                iconSize = 28.dp,
+                onClick = {
+                    // TODO: navController.navigate("schoolPage")
+                }
+            )
+
+            Spacer(modifier = Modifier.width(50.dp))
+
+            NavItem(
+                icon = Icons.Default.BarChart,
+                isSelected = false,
+                iconSize = 28.dp,
+                onClick = {
+                    // TODO: navController.navigate("chartPage")
+                }
+            )
+
+            NavItem(
+                icon = Icons.Default.Person,
+                isSelected = false,
+                iconSize = 28.dp,
+                onClick = {
+                    // TODO: navController.navigate("profilePage")
+                }
+            )
         }
 
-        // ✅ 카메라 버튼 (플로팅 느낌)
+        // ✅ 카메라 버튼
         FloatingActionButton(
-            onClick = { /* TODO: 카메라 기능 연결 */ },
+            onClick = { /* TODO: 카메라 클릭 처리 */ },
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = (-28).dp), // 위로 띄우기
-            containerColor = Color(0xFFC2E38E) // 연두색 배경
+                .offset(y = (-28).dp)
+                .size(68.dp),
+            containerColor = Color(0xFF53AEBE),
+            shape = CircleShape
         ) {
             Icon(
                 imageVector = Icons.Default.CameraAlt,
                 contentDescription = "카메라",
-                tint = Color.White
+                tint = Color.White,
+                modifier = Modifier.size(40.dp)
             )
         }
     }
 }
 
 @Composable
-fun NavItem(icon: ImageVector, isSelected: Boolean) {
-    Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = if (isSelected) Color(0xFF000000) else Color(0xFFCCCCCC),
-        modifier = Modifier.size(24.dp)
-    )
+fun NavItem(
+    icon: ImageVector,
+    isSelected: Boolean,
+    iconSize: Dp = 28.dp,
+    onClick: () -> Unit
+) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (isSelected) Color(0xFF0C092A) else Color.Gray,
+            modifier = Modifier.size(iconSize)
+        )
+    }
 }
+
+@Composable
+fun Modifier.customShadow(
+    shadowColors: List<Color> = listOf(
+        Color(0x00CCCCCC),
+        Color(0x10CCCCCC),
+        Color(0x30CCCCCC),
+        Color(0x50000000) // 진한 그림자 마지막
+    ),
+    cornerRadius: Dp = 20.dp
+): Modifier = this.then(
+    Modifier.drawBehind {
+        val radius = cornerRadius.toPx()
+        shadowColors.forEachIndexed { index, color ->
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(2f, (index + 1) * 2f),
+                size = size,
+                cornerRadius = CornerRadius(radius, radius)
+            )
+        }
+    }
+)
+
 
 //@Preview(showBackground = true)
 @Composable
