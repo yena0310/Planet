@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 HomeScreen()
-                QuizQuestionScreen()
+                Quiz1QuestionScreen()
                 BottomNavigationBar()
                 StudyQuizPage()
             }
@@ -603,9 +603,9 @@ fun Modifier.customShadow(
 )
 
 
-//@Preview(showBackground = true)
+@Preview(showBackground = true)
 @Composable
-fun QuizQuestionScreen() {
+fun Quiz1QuestionScreen() {
 
     val pretendardsemibold = FontFamily(
         Font(R.font.pretendardsemibold)
@@ -615,7 +615,7 @@ fun QuizQuestionScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFC2E38E)) // 배경 연두색
+            .background(Color(0xFF7AC5D3)) // 배경
     ) {
 
         Box(
