@@ -40,14 +40,24 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.drawBehind
-
-
-
-
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.*
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.clip
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,6 +68,9 @@ class MainActivity : ComponentActivity() {
                 Quiz1QuestionScreen()
                 BottomNavigationBar()
                 StudyQuizPage()
+                Quiz1AnswerScreen()
+                Quiz2QuestionScreen()
+                Quiz3QuestionScreen()
             }
         }
     }
@@ -219,8 +232,8 @@ fun HomeScreen() {
 }
 
 
-@Preview(showBackground = true)
-@Composable
+//@Preview(showBackground = true)
+@Composable//-->메인퀴즈페이지
 fun StudyQuizPage() {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
@@ -458,7 +471,7 @@ fun StudyQuizPage() {
         }
     }}
 
-@Composable
+@Composable//-->하단 네비게이션바
 fun BottomNavigationBar(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
@@ -562,7 +575,7 @@ fun BottomNavigationBar(modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
+@Composable//-->네비게이션바 아이콘들
 fun NavItem(
     icon: ImageVector,
     isSelected: Boolean,
@@ -579,7 +592,7 @@ fun NavItem(
     }
 }
 
-@Composable
+@Composable//-->그림자
 fun Modifier.customShadow(
     shadowColors: List<Color> = listOf(
         Color(0x00CCCCCC),
@@ -602,9 +615,8 @@ fun Modifier.customShadow(
     }
 )
 
-
-@Preview(showBackground = true)
-@Composable
+//@Preview(showBackground = true)
+@Composable//-->퀴즈1 문제페이지
 fun Quiz1QuestionScreen() {
 
     val pretendardsemibold = FontFamily(
@@ -625,7 +637,7 @@ fun Quiz1QuestionScreen() {
                 .align(Alignment.BottomCenter)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                 .background(Color.White)
-                .height(835.dp)
+                .height(800.dp)
         ) {
 
             // ✅ Row로 정렬: 백버튼, 문제수, 점수
@@ -667,12 +679,12 @@ fun Quiz1QuestionScreen() {
             // ✅ 문제 텍스트
             Text(
                 text = "종이팩은 일반 종이류와 함께 배출한다.",
-                fontSize = 20.sp,
+                fontSize = 24.sp,
                 color = Color.Black,
                 fontFamily = pretendardsemibold,
                 modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(horizontal = 60.dp),
+                    .align(Alignment.TopCenter) // 중앙보다 위쪽에 위치
+                    .padding(horizontal = 60.dp, vertical = 250.dp), // 여유 공간 조절
                 textAlign = TextAlign.Center
             )
 
@@ -722,4 +734,466 @@ fun Quiz1QuestionScreen() {
 
     }
 }}
+
+//@Preview(showBackground = true)
+@Composable//-->퀴즈1 해설페이지
+fun Quiz1AnswerScreen() {
+
+    val pretendardsemibold = FontFamily(
+        Font(R.font.pretendardsemibold)
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF7AC5D3)) // 배경색
+    ) {
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp)
+                .align(Alignment.BottomCenter)
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                .background(Color.White)
+                .height(800.dp)
+        ) {
+
+            // 상단: 뒤로가기, 문제 수, 점수
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .align(Alignment.TopCenter),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = { /* TODO: 뒤로 가기 */ }) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "뒤로 가기",
+                    )
+                }
+
+                Text(
+                    text = "1 / 100",
+                    fontSize = 18.sp,
+                    color = Color.Black,
+                    fontFamily = pretendardsemibold
+                )
+
+                Text(
+                    text = "89 P",
+                    fontSize = 16.sp,
+                    color = Color.Black,
+                    fontFamily = pretendardsemibold
+                )
+            }
+
+            // 문제 텍스트
+            Text(
+                text = "종이팩은 일반 종이류와 함께 배출한다.",
+                fontSize = 20.sp,
+                color = Color.Black,
+                fontFamily = pretendardsemibold,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 60.dp, vertical = 100.dp),
+                textAlign = TextAlign.Center
+            )
+
+            // 다음 문제 버튼 + 아이콘
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopEnd)
+                    .padding(top = 200.dp, end = 30.dp), // 오른쪽 여백 추가
+
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End // 수평 오른쪽 정렬
+            ) {
+                Text(
+                    text = "다음 문제",
+                    fontSize = 16.sp,
+                    fontFamily = pretendardsemibold,
+                    color = Color(0xFF585858)
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowForward,
+                    contentDescription = "다음 문제",
+                    modifier = Modifier.padding(start = 4.dp),
+                    tint = Color(0xFF585858)
+                )
+            }
+
+            // 라운드 박스 (오답)
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(y = 70.dp)
+                    .fillMaxWidth(0.80f) // 전체 화면의 85% 너비
+                    .height(400.dp) // 높이 지정
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xFFF9F6F2))
+                    .padding(29.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "오답!",
+                    fontSize = 22.sp,
+                    fontFamily = pretendardsemibold,
+                    color = Color.Black
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "오답 아이콘",
+                    tint = Color(0xFF4A75E1),
+                    modifier = Modifier.size(70.dp)
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = "종이팩은 종이류가 아닌,전용\n수거함에 배출해야 합니다.",
+                    fontSize = 20.sp,
+                    fontFamily = pretendardsemibold,
+                    color = Color.Black,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable//-->퀴즈2 문제페이지
+fun Quiz2QuestionScreen() {
+
+    val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
+
+    val correctAnswer = "음식물"
+    var answer by remember { mutableStateOf("") }
+    var isSubmitted by remember { mutableStateOf(false) }
+    var isCorrect by remember { mutableStateOf<Boolean?>(null) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF7AC5D3)) // 배경
+    ) {
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp)
+                .align(Alignment.BottomCenter)
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                .background(Color.White)
+                .height(800.dp)
+        ) {
+
+            // 상단 정보
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .align(Alignment.TopCenter),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = { /* TODO */ }) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "뒤로 가기",
+                    )
+                }
+
+                Text(
+                    text = "1 / 100",
+                    fontSize = 18.sp,
+                    color = Color.Black,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    fontFamily = pretendardsemibold
+                )
+
+                Text(
+                    text = "89 P",
+                    fontSize = 16.sp,
+                    color = Color.Black,
+                    fontFamily = pretendardsemibold
+                )
+            }
+
+            // ✅ 문제 텍스트
+            Text(
+                text = "바나나 껍질은\n○○○ 쓰레기이다.",
+                fontSize = 24.sp,
+                color = Color.Black,
+                fontFamily = pretendardsemibold,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 60.dp, vertical = 180.dp),
+                textAlign = TextAlign.Center
+            )
+
+            // ✅ 힌트 텍스트 (초성)
+            Text(
+                text = "힌트: 초성 ㅇㅅㅁ",
+                fontSize = 17.sp,
+                color = Color.LightGray,
+                fontFamily = pretendardsemibold,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 300.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter) // 상단 기준으로 위치 조절 가능
+                    .padding(top = 420.dp) // 👈 너가 조절할 수 있는 위치 포인트
+                    .padding(horizontal = 24.dp)
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            ) {
+                OutlinedTextField(
+                    value = answer,
+                    onValueChange = {
+                        answer = it
+                        isSubmitted = false
+                        isCorrect = null
+                    },
+                    placeholder = {
+                        Text("정답을 입력하세요", fontFamily = pretendardsemibold)
+                    },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White, shape = RoundedCornerShape(8.dp)),
+                    colors = TextFieldDefaults.colors(
+                        unfocusedContainerColor = Color(0xFFF4F4F4),
+                        focusedContainerColor = Color(0xFFF4F4F4),
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent
+                    ),
+                    textStyle = LocalTextStyle.current.copy(fontFamily = pretendardsemibold),
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            isSubmitted = true
+                            isCorrect = answer.trim() == correctAnswer
+                        }
+                    ),
+                    trailingIcon = {
+                        Button(
+                            onClick = {
+                                isSubmitted = true
+                                isCorrect = answer.trim() == correctAnswer
+                            },
+                            enabled = answer.isNotBlank(),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            modifier = Modifier.padding(end = 4.dp)
+                        ) {
+                            Text("제출", fontFamily = pretendardsemibold, fontSize = 14.sp)
+                        }
+                    }
+                )
+            }
+
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+                if (isSubmitted && isCorrect != null) {
+                    if (isCorrect == true) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "정답",
+                                tint = Color(0xFF4CAF50),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "정답입니다!",
+                                color = Color(0xFF4CAF50),
+                                fontFamily = pretendardsemibold
+                            )
+                        }
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "오답",
+                                tint = Color(0xFFE53935),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "오답입니다. 다시 시도해보세요.",
+                                color = Color(0xFFE53935),
+                                fontFamily = pretendardsemibold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+@Preview(showBackground = true)
+@Composable//-->퀴즈3 문제페이지
+fun Quiz3QuestionScreen() {
+    val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
+
+    val questions = listOf("깨진 유리컵", "종이 영수증", "유리병 뚜껑", "우유 팩")
+    val answers = listOf(
+        "깨끗이 헹궈서 종이팩 전용 수거함에 배출",
+        "신문지 등에 싸서 일반 쓰레기로 배출",
+        "병과 분리해서 캔류(금속)로 배출",
+        "감염지라서 일반 쓰레기에 배출"
+    )
+    val correctMap = mapOf(
+        "깨진 유리컵" to "신문지 등에 싸서 일반 쓰레기로 배출",
+        "종이 영수증" to "감염지라서 일반 쓰레기에 배출",
+        "유리병 뚜껑" to "병과 분리해서 캔류(금속)로 배출",
+        "우유 팩" to "깨끗이 헹궈서 종이팩 전용 수거함에 배출"
+    )
+
+    var selectedQuestion by remember { mutableStateOf<String?>(null) }
+    val matchedPairs = remember { mutableStateListOf<Pair<String, String>>() }
+    val wrongPairs = remember { mutableStateListOf<Pair<String, String>>() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF7AC5D3)) // 배경
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp)
+                .align(Alignment.BottomCenter)
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                .background(Color.White)
+                .height(800.dp)
+        ) {
+            // 상단 정보
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .align(Alignment.TopCenter),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = { /* TODO: 뒤로 가기 */ }) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "뒤로 가기"
+                    )
+                }
+
+                Text(
+                    text = "1 / 100",
+                    fontSize = 18.sp,
+                    color = Color.Black,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    fontFamily = pretendardsemibold
+                )
+
+                Text(
+                    text = "89 P",
+                    fontSize = 16.sp,
+                    color = Color.Black,
+                    fontFamily = pretendardsemibold
+                )
+            }
+
+            // 문제 텍스트
+            Text(
+                text = "쓰레기와 배출방법을\n올바르게 연결하세요",
+                fontSize = 24.sp,
+                color = Color.Black,
+                fontFamily = pretendardsemibold,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 60.dp, vertical = 120.dp),
+                textAlign = TextAlign.Center
+            )
+
+            // 매칭 문제 본문
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 180.dp, bottom = 40.dp, start = 16.dp, end = 16.dp)
+                    .align(Alignment.Center)
+            ) {
+                // 문제 항목
+                Column(Modifier.weight(1f)) {
+                    questions.forEach { question ->
+                        val isSelected = selectedQuestion == question
+                        val isWrong = wrongPairs.any { it.first == question }
+                        val bgColor by animateColorAsState(
+                            if (isWrong) Color.Red else if (isSelected) Color(0xFFB3E5FC) else Color(0xFFE0F7FA),
+                            animationSpec = tween(durationMillis = 300)
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(bgColor)
+                                .clickable { selectedQuestion = question }
+                                .padding(16.dp)
+                        ) {
+                            Text(question, fontSize = 16.sp, fontFamily = pretendardsemibold)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // 답변 항목
+                Column(Modifier.weight(1f)) {
+                    answers.forEach { answer ->
+                        val isWrong = wrongPairs.any { it.second == answer }
+                        val bgColor by animateColorAsState(
+                            if (isWrong) Color.Red else Color(0xFFF1F8E9),
+                            animationSpec = tween(durationMillis = 300)
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(bgColor)
+                                .clickable {
+                                    selectedQuestion?.let { question ->
+                                        if (correctMap[question] == answer) {
+                                            matchedPairs.add(question to answer)
+                                        } else {
+                                            wrongPairs.add(question to answer)
+                                            // 깜빡 효과 제거됨 나중에 틀리면 빨강색 됐다 되돌아가는 코드 추가하기
+                                        }
+                                        selectedQuestion = null
+                                    }
+                                }
+                                .padding(16.dp)
+                        ) {
+                            Text(answer, fontSize = 14.sp, fontFamily = pretendardsemibold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
 
