@@ -868,7 +868,7 @@ fun Quiz1AnswerScreen() {
     }
 }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable//-->퀴즈2 문제페이지
 fun Quiz2QuestionScreen() {
 
@@ -1049,9 +1049,9 @@ fun Quiz3QuestionScreen() {
 
     val questions = listOf("깨진 유리컵", "종이 영수증", "유리병 뚜껑", "우유 팩")
     val answers = listOf(
-        "깨끗이 헹궈서 종이팩 전용 수거함에 배출",
-        "신문지 등에 싸서 일반 쓰레기로 배출",
-        "병과 분리해서 캔류(금속)로 배출",
+        "깨끗이 헹궈 종이팩\n전용 수거함에 배출",
+        "신문지 등에 싸서\n일반 쓰레기로 배출",
+        "병과 분리해서\n캔류(금속)로 배출",
         "감염지라서 일반 쓰레기에 배출"
     )
     val correctMap = mapOf(
@@ -1131,7 +1131,11 @@ fun Quiz3QuestionScreen() {
                     .align(Alignment.Center)
             ) {
                 // 문제 항목
-                Column(Modifier.weight(1f)) {
+                Column(
+                    modifier=Modifier
+                    .weight(1f)
+                    .padding(top = 24.dp)
+                ) {
                     questions.forEach { question ->
                         val isSelected = selectedQuestion == question
                         val isWrong = wrongPairs.any { it.first == question }
@@ -1142,12 +1146,13 @@ fun Quiz3QuestionScreen() {
 
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .width(130.dp)
                                 .padding(8.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(bgColor)
                                 .clickable { selectedQuestion = question }
-                                .padding(16.dp)
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center // ✅ 가운데 정렬
                         ) {
                             Text(question, fontSize = 16.sp, fontFamily = pretendardsemibold)
                         }
