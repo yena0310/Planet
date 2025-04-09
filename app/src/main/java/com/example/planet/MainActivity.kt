@@ -8,7 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,7 +24,10 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
+import androidx.compose.material.icons.automirrored.filled.NavigateBefore
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -55,9 +57,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import kotlinx.coroutines.delay
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,9 +65,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 HomeScreen()
-                Quiz1QuestionScreen()
                 BottomNavigationBar()
                 StudyQuizPage()
+                Quiz1QuestionScreen()
                 Quiz1AnswerScreen()
                 Quiz2QuestionScreen()
                 Quiz3QuestionScreen()
@@ -82,6 +82,8 @@ fun HomeScreen() {
 
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
+
+    val iconTint = Color(0xFF546A6E)
 
     Scaffold(
         bottomBar = {
@@ -124,15 +126,17 @@ fun HomeScreen() {
             Spacer(modifier = Modifier.height(16.dp))
 
             // ======= 최근 퀴즈 박스 (버튼 + 그림자 + TODO 이동) =======
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
+            Surface(
+                tonalElevation = 8.dp,
+                shadowElevation = 8.dp,
                 shape = RoundedCornerShape(20.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                color = Color.White,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp)
+                    .customShadow()
                     .clickable {
-                        // TODO: 페이지 이동 처리 (예: navController.navigate("quizPage"))
+                        // TODO: 최근 퀴즈 문제로 이동 (없으면 레벨1에 문제1)
                     }
             ) {
                 Column(
@@ -143,29 +147,36 @@ fun HomeScreen() {
                         text = "RECENT QUIZ",
                         color = Color.Gray,
                         fontSize = 12.06.sp,
-                        fontFamily = pretendardsemibold,
+                        fontFamily = pretendardbold,
                         modifier = Modifier.padding(start = 15.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 15.dp, end = 15.dp),
+                            .padding(horizontal = 15.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "첫 문제를 풀어보세요! >>",
-                            color = Color(0xFF546A6E),
-                            fontSize = 16.64.sp,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontFamily = pretendardbold
-                        )
-                        Text(
-                            text = "0%",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontFamily = pretendardsemibold
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "첫 문제를 풀어보세요 !", // TODO: 히스토리 확인해서 최근 문제 또는 첫 문제로 멘트 변경
+                                color = Color(0xFF546A6E),
+                                fontSize = 16.64.sp,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontFamily = pretendardbold
+                            )
+
+                            Spacer(modifier = Modifier.width(6.dp))
+
+                            Icon(
+                                imageVector = Icons.Default.KeyboardDoubleArrowRight,
+                                contentDescription = "Next",
+                                tint = Color(0xFF546A6E)
+                            )
+                        }
                     }
                 }
             }
@@ -179,6 +190,7 @@ fun HomeScreen() {
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .customShadow()
                     .height(60.dp)
             ) {
                 Row(
@@ -191,6 +203,7 @@ fun HomeScreen() {
                             text = "내 등수",
                             fontSize = 13.sp,
                             style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = pretendardbold,
                             color = Color(0xFF284449)
                         )
                         Text(
@@ -215,6 +228,7 @@ fun HomeScreen() {
                             text = "학교 점수",
                             fontSize = 13.sp,
                             style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = pretendardbold,
                             color = Color(0xFF284449)
                         )
                         Text(
@@ -227,12 +241,105 @@ fun HomeScreen() {
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .customShadow()
+                    .height(IntrinsicSize.Min), // 높이 고정보다는 콘텐츠에 맞게
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "분리배출 도우미",
+                        fontSize = 19.sp,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontFamily = pretendardbold,
+                        color = Color(0xFF284449)
+                    )
+
+                    Text(
+                        text = "헷갈리는 분리배출, AI 가이드를 받아보세요!",
+                        fontSize = 14.sp,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = pretendardbold,
+                        color = Color(0xff859DA1)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center, // 버튼들 전체 중앙 정렬
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Button(
+                                onClick = { /* TODO: 폐기물 분류 클릭 이벤트 */ },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE4FBFF))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "폐기물 분류",
+                                        fontSize = 16.sp,
+                                        fontFamily = pretendardbold,
+                                        color = Color(0xFF284449)
+                                    )
+
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.NavigateNext,
+                                        contentDescription = "Next",
+                                        tint = iconTint,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+
+                            Button(
+                                onClick = { /* TODO: 분리배출 표시 클릭 이벤트 */ },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE4FBFF))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "분리배출 표시",
+                                        fontSize = 16.sp,
+                                        fontFamily = pretendardbold,
+                                        color = Color(0xFF284449)
+                                    )
+
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.NavigateNext,
+                                        contentDescription = "Next",
+                                        tint = iconTint,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 
-//@Preview(showBackground = true)
+@Preview(showBackground = true)
 @Composable//-->메인퀴즈페이지
 fun StudyQuizPage() {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
@@ -278,17 +385,18 @@ fun StudyQuizPage() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ======= 최근 퀴즈 박스 =======
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+            // ======= 최근 퀴즈 박스 (버튼 + 그림자 + TODO 이동) =======
+            Surface(
+                tonalElevation = 8.dp,
+                shadowElevation = 8.dp,
                 shape = RoundedCornerShape(20.dp),
-                //elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
+                color = Color.White,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp)
                     .customShadow()
                     .clickable {
-                        // TODO: navController.navigate("quizPage")
+                        // TODO: 최근 퀴즈 문제로 이동 (없으면 레벨1에 문제1)
                     }
             ) {
                 Column(
@@ -299,33 +407,39 @@ fun StudyQuizPage() {
                         text = "RECENT QUIZ",
                         color = Color.Gray,
                         fontSize = 12.06.sp,
-                        fontFamily = pretendardsemibold,
+                        fontFamily = pretendardbold,
                         modifier = Modifier.padding(start = 15.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 15.dp, end = 15.dp),
+                            .padding(horizontal = 15.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "이어서 풀기 >>",
-                            color = Color(0xFF546A6E),
-                            fontSize = 18.sp,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontFamily = pretendardbold
-                        )
-                        Text(
-                            text = "0%",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontFamily = pretendardsemibold
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "이어서 문제를 풀어보세요 !", // TODO: 히스토리 확인해서 최근 문제 또는 첫 문제로 멘트 변경
+                                color = Color(0xFF546A6E),
+                                fontSize = 16.64.sp,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontFamily = pretendardbold
+                            )
+
+                            Spacer(modifier = Modifier.width(6.dp))
+
+                            Icon(
+                                imageVector = Icons.Default.KeyboardDoubleArrowRight,
+                                contentDescription = "Next",
+                                tint = Color(0xFF546A6E)
+                            )
+                        }
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
 
             // ======= 틀린문제 복습 박스 =======
@@ -347,13 +461,21 @@ fun StudyQuizPage() {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "틀렸던 문제를 다시 풀어볼까요?  >>",
+                        text = "틀렸던 문제를 다시 풀어볼까요?",
                         color = Color(0xFF546A6E),
                         fontSize = 18.sp,
                         style = MaterialTheme.typography.titleMedium,
                         fontFamily = pretendardbold
                     )
-                }}
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Icon(
+                        imageVector = Icons.Default.KeyboardDoubleArrowRight,
+                        contentDescription = "Next",
+                        tint = Color(0xFF546A6E)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -383,7 +505,7 @@ fun StudyQuizPage() {
                     Spacer(modifier = Modifier.height(20.dp))
 
                     listOf(
-                        Triple("1", "Chapter 1", "20 문제 | 완료!"),
+                        Triple("1", "Chapter 1", "20 문제 | 완료!"), // TODO: 완료, 진행중, 첫시도 디자인 나누기
                         Triple("2", "Chapter 2", "20 문제"),
                         Triple("3", "Chapter 3", "20 문제"),
                         Triple("4", "Chapter 4", "20 문제"),
@@ -395,7 +517,7 @@ fun StudyQuizPage() {
                         val backgroundColor = if (isCompleted) Color(0xFF4E4E58) else Color.White
                         val borderColor = if (isCompleted) Color.Transparent else Color(0xFFB9DEE4)
 
-// ✅ 글씨 색상 - Chapter 1만 따로 분기
+                        // ✅ 글씨 색상 - 완료된 챕터만 분기
                         val titleColor = if (isCompleted) Color(0xFFC2EFF7) else Color(0xFF546A6E)
                         val subtitleColor = if (isCompleted) Color(0xFF95D0DB) else Color(0xFF858494)
 
@@ -454,8 +576,9 @@ fun StudyQuizPage() {
 
                                 Spacer(modifier = Modifier.weight(1f))
 
+
                                 Icon(
-                                    imageVector = Icons.Default.ArrowForward,
+                                    imageVector = Icons.AutoMirrored.Filled.NavigateNext,
                                     contentDescription = "Next",
                                     tint = iconTint
                                 )
@@ -467,7 +590,6 @@ fun StudyQuizPage() {
                     }
                 }
             }
-
         }
     }}
 
@@ -623,7 +745,6 @@ fun Quiz1QuestionScreen() {
         Font(R.font.pretendardsemibold)
     )
 
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -652,7 +773,7 @@ fun Quiz1QuestionScreen() {
                 // 🔙 이전으로 돌아가기 버튼
                 IconButton(onClick = { /* TODO: 뒤로 가기 */ }) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "뒤로 가기",
                     )
                 }
@@ -770,7 +891,7 @@ fun Quiz1AnswerScreen() {
             ) {
                 IconButton(onClick = { /* TODO: 뒤로 가기 */ }) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "뒤로 가기",
                     )
                 }
@@ -819,7 +940,7 @@ fun Quiz1AnswerScreen() {
                     color = Color(0xFF585858)
                 )
                 Icon(
-                    imageVector = Icons.Default.ArrowForward,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = "다음 문제",
                     modifier = Modifier.padding(start = 4.dp),
                     tint = Color(0xFF585858)
@@ -868,7 +989,24 @@ fun Quiz1AnswerScreen() {
     }
 }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
+@Composable
+fun QuizMainScreen() {
+
+    val pretendardsemibold = FontFamily(
+        Font(R.font.pretendardsemibold)
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFC2E38E)) // 배경 연두색
+    ) {
+
+    }
+}
+
+//@Preview(showBackground = true)
 @Composable//-->퀴즈2 문제페이지
 fun Quiz2QuestionScreen() {
 
@@ -906,7 +1044,7 @@ fun Quiz2QuestionScreen() {
             ) {
                 IconButton(onClick = { /* TODO */ }) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "뒤로 가기",
                     )
                 }
@@ -1042,7 +1180,7 @@ fun Quiz2QuestionScreen() {
         }
     }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable//-->퀴즈3 문제페이지
 fun Quiz3QuestionScreen() {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
@@ -1090,7 +1228,7 @@ fun Quiz3QuestionScreen() {
             ) {
                 IconButton(onClick = { /* TODO: 뒤로 가기 */ }) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "뒤로 가기"
                     )
                 }
