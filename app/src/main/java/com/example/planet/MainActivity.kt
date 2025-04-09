@@ -57,7 +57,15 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
+import androidx.compose.material.icons.rounded.ArrowBackIosNew
+import androidx.compose.material.icons.rounded.ArrowForwardIos
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -738,7 +746,7 @@ fun Modifier.customShadow(
     }
 )
 
-//@Preview(showBackground = true)
+@Preview(showBackground = true)
 @Composable//-->퀴즈1 문제페이지
 fun Quiz1QuestionScreen() {
 
@@ -772,9 +780,11 @@ fun Quiz1QuestionScreen() {
                 horizontalArrangement = Arrangement.SpaceBetween // 양끝으로 배치하면 필요 없음
             ) {
                 // 🔙 이전으로 돌아가기 버튼
-                IconButton(onClick = { /* TODO: 뒤로 가기 */ }) {
+                IconButton(onClick = { /* TODO: 뒤로가기 */ }) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = Icons.Rounded.ArrowBackIosNew,
+                        modifier = Modifier.size(25.dp),
+                        tint = Color.Gray,
                         contentDescription = "뒤로 가기",
                     )
                 }
@@ -857,7 +867,7 @@ fun Quiz1QuestionScreen() {
     }
 }}
 
-//@Preview(showBackground = true)
+@Preview(showBackground = true)
 @Composable//-->퀴즈1 해설페이지
 fun Quiz1AnswerScreen() {
 
@@ -890,9 +900,11 @@ fun Quiz1AnswerScreen() {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { /* TODO: 뒤로 가기 */ }) {
+                IconButton(onClick = { /* TODO: 뒤로가기 */ }) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = Icons.Rounded.ArrowBackIosNew,
+                        modifier = Modifier.size(25.dp),
+                        tint = Color.Gray,
                         contentDescription = "뒤로 가기",
                     )
                 }
@@ -941,7 +953,7 @@ fun Quiz1AnswerScreen() {
                     color = Color(0xFF585858)
                 )
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
                     contentDescription = "다음 문제",
                     modifier = Modifier.padding(start = 4.dp),
                     tint = Color(0xFF585858)
@@ -979,7 +991,7 @@ fun Quiz1AnswerScreen() {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-                    text = "종이팩은 종이류가 아닌,전용\n수거함에 배출해야 합니다.",
+                    text = "종이팩은 종이류가 아닌, 전용\n수거함에 배출해야 합니다.",
                     fontSize = 20.sp,
                     fontFamily = pretendardsemibold,
                     color = Color.Black,
@@ -1026,9 +1038,11 @@ fun Quiz2QuestionScreen() {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { /* TODO */ }) {
+                IconButton(onClick = { /* TODO: 뒤로가기 */ }) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = Icons.Rounded.ArrowBackIosNew,
+                        modifier = Modifier.size(25.dp),
+                        tint = Color.Gray,
                         contentDescription = "뒤로 가기",
                     )
                 }
@@ -1210,10 +1224,12 @@ fun Quiz3QuestionScreen() {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { /* TODO: 뒤로 가기 */ }) {
+                IconButton(onClick = { /* TODO: 뒤로가기 */ }) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "뒤로 가기"
+                        imageVector = Icons.Rounded.ArrowBackIosNew,
+                        modifier = Modifier.size(25.dp),
+                        tint = Color.Gray,
+                        contentDescription = "뒤로 가기",
                     )
                 }
 
@@ -1320,7 +1336,7 @@ fun Quiz3QuestionScreen() {
     }
 }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable//-->퀴즈4 문제페이지
 fun Quiz4QuestionScreen() {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
@@ -1348,10 +1364,12 @@ fun Quiz4QuestionScreen() {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { /* TODO: 뒤로 가기 */ }) {
+                IconButton(onClick = { /* TODO: 뒤로가기 */ }) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "뒤로 가기"
+                        imageVector = Icons.Rounded.ArrowBackIosNew,
+                        modifier = Modifier.size(25.dp),
+                        tint = Color.Gray,
+                        contentDescription = "뒤로 가기",
                     )
                 }
 
