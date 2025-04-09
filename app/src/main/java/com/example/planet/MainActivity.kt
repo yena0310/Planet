@@ -55,9 +55,8 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import kotlinx.coroutines.delay
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,6 +70,7 @@ class MainActivity : ComponentActivity() {
                 Quiz1AnswerScreen()
                 Quiz2QuestionScreen()
                 Quiz3QuestionScreen()
+                Quiz4QuestionScreen()
             }
         }
     }
@@ -1042,7 +1042,7 @@ fun Quiz2QuestionScreen() {
         }
     }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable//-->퀴즈3 문제페이지
 fun Quiz3QuestionScreen() {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
@@ -1197,6 +1197,164 @@ fun Quiz3QuestionScreen() {
         }
     }
 }
+
+@Preview(showBackground = true)
+@Composable//-->퀴즈4 문제페이지
+fun Quiz4QuestionScreen() {
+    val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF7AC5D3)) // 배경
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp)
+                .align(Alignment.BottomCenter)
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                .background(Color.White)
+                .height(800.dp)
+        ) {
+            // 상단 정보
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .align(Alignment.TopCenter),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = { /* TODO: 뒤로 가기 */ }) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "뒤로 가기"
+                    )
+                }
+
+                Text(
+                    text = "1 / 100",
+                    fontSize = 18.sp,
+                    color = Color.Black,
+                    fontFamily = pretendardsemibold
+                )
+
+                Text(
+                    text = "89 P",
+                    fontSize = 16.sp,
+                    color = Color.Black,
+                    fontFamily = pretendardsemibold
+                )
+            }
+            // 문제 텍스트
+            Text(
+                text = "다음 중 일반 쓰레기로\n버려야 하는 것은?",
+                fontSize = 24.sp,
+                color = Color.Black,
+                fontFamily = pretendardsemibold,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 60.dp, vertical = 120.dp),
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(40.dp))
+            // 문제 텍스트 아래에 보기와 선택 버튼 추가
+            // 하단에 정사각형 버튼 그리드
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+            ){
+            Column(
+                modifier = Modifier
+                    .padding(start = 60.dp, bottom = 200.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val textStyle = TextStyle(fontSize = 20.sp, fontFamily = pretendardsemibold)
+                Text("A. 신문지", style = textStyle)
+                Text("B. 음식물이 묻은 종이컵", style = textStyle)
+                Text("C. 깨끗한 플라스틱 컵", style = textStyle)
+                Text("D. 종이 상자", style = textStyle)
+            }}
+
+            // 하단에 정사각형 버튼 그리드
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter) // ✅ 하단 정렬
+            ) {
+                Column(
+                    modifier = Modifier
+                        .aspectRatio(1f)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .background(Color(0xFFFFE28C)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("A", fontSize = 80.sp, fontWeight = FontWeight.Bold,color = Color.White)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .background(Color(0xFF9CD7B5)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("B", fontSize = 80.sp, fontWeight = FontWeight.Bold,color = Color.White)
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .background(Color(0xFF9CCDE9)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("C", fontSize = 80.sp, fontWeight = FontWeight.Bold,color = Color.White)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .background(Color(0xFFFFBD88)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("D", fontSize = 80.sp, fontWeight = FontWeight.Bold,color = Color.White)
+                        }
+                    }
+                }
+            }
+
+        }
+    }
+}
+
+
+
+
+
+
+
+
 
 
 

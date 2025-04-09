@@ -66,8 +66,6 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.material.icons.extended)
-    //implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-    //implementation("androidx.compose.runtime:runtime-livedata:1.3.0")
 
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
