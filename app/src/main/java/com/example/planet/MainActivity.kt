@@ -1,70 +1,63 @@
 package com.example.planet
 
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview as CameraXPreview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.ArrowBackIosNew
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.NavigateNext
-import androidx.compose.material.icons.automirrored.filled.NavigateBefore
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Path
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.ui.draw.shadow
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.border
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.runtime.*
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
-import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
-import androidx.compose.material.icons.rounded.ArrowBackIosNew
-import androidx.compose.material.icons.rounded.ArrowForwardIos
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.lifecycle.LifecycleOwner
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberPermissionState
 
 
 class MainActivity : ComponentActivity() {
@@ -80,6 +73,8 @@ class MainActivity : ComponentActivity() {
                 Quiz2QuestionScreen()
                 Quiz3QuestionScreen()
                 Quiz4QuestionScreen()
+                CameraScreenPreview()
+                GuideResultScreen()
             }
         }
     }
@@ -95,9 +90,8 @@ fun HomeScreen() {
     val iconTint = Color(0xFF546A6E)
 
     Scaffold(
-        bottomBar = {
-            BottomNavigationBar()
-        }
+        bottomBar = { BottomNavigationBar(selectedItem = BottomNavItem.Home) }
+
     ) { innerPadding ->
 
         Column(
@@ -126,8 +120,8 @@ fun HomeScreen() {
                 )
                 Text(
                     text = "89 P",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontSize = 17.sp,
+                    fontSize = 14.sp,
+                    color = Color.Black,
                     fontFamily = pretendardsemibold
                 )
             }
@@ -308,10 +302,10 @@ fun HomeScreen() {
                                     )
 
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.NavigateNext,
+                                        imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
                                         contentDescription = "Next",
                                         tint = iconTint,
-                                        modifier = Modifier.size(22.dp)
+                                        modifier = Modifier.size(14.dp)
                                     )
                                 }
                             }
@@ -332,10 +326,10 @@ fun HomeScreen() {
                                     )
 
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.NavigateNext,
+                                        imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
                                         contentDescription = "Next",
                                         tint = iconTint,
-                                        modifier = Modifier.size(22.dp)
+                                        modifier = Modifier.size(14.dp)
                                     )
                                 }
                             }
@@ -347,17 +341,15 @@ fun HomeScreen() {
     }
 }
 
-
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable//-->메인퀴즈페이지
 fun StudyQuizPage() {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
 
     Scaffold(
-        bottomBar = {
-            BottomNavigationBar()
-        }
+        bottomBar = { BottomNavigationBar(selectedItem = BottomNavItem.Quiz) }
+
     ) { innerPadding ->
 
         Column(
@@ -386,8 +378,8 @@ fun StudyQuizPage() {
                 )
                 Text(
                     text = "89 P",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontSize = 17.sp,
+                    fontSize = 14.sp,
+                    color = Color.Black,
                     fontFamily = pretendardsemibold
                 )
             }
@@ -602,8 +594,14 @@ fun StudyQuizPage() {
         }
     }}
 
+enum class BottomNavItem // 네비게이션바 아이템
+{ Home, Quiz, Rank, Profile, None }
+
 @Composable//-->하단 네비게이션바
-fun BottomNavigationBar(modifier: Modifier = Modifier) {
+fun BottomNavigationBar(
+    modifier: Modifier = Modifier,
+    selectedItem: BottomNavItem = BottomNavItem.None
+) {
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -615,7 +613,7 @@ fun BottomNavigationBar(modifier: Modifier = Modifier) {
             )
             .background(Color.Transparent)
     ) {
-        // ✅ 네비게이션 바 배경 (상단 라운드)
+        // 배경
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -639,56 +637,42 @@ fun BottomNavigationBar(modifier: Modifier = Modifier) {
             )
         }
 
-        // ✅ 아이콘 버튼들
+        // 아이콘 버튼들
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 40.dp),
+                .padding(horizontal = 30.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             NavItem(
                 icon = Icons.Default.Home,
-                isSelected = true,
-                iconSize = 28.dp,
-                onClick = {
-                    // TODO: navController.navigate("homePage")
-                }
+                isSelected = selectedItem == BottomNavItem.Home,
+                onClick = { /* TODO: 홈으로 이동 */ }
             )
-
             NavItem(
                 icon = Icons.Default.School,
-                isSelected = false,
-                iconSize = 28.dp,
-                onClick = {
-                    // TODO: navController.navigate("schoolPage")
-                }
+                isSelected = selectedItem == BottomNavItem.Quiz,
+                onClick = { /* TODO: 퀴즈로 이동 */ }
             )
 
             Spacer(modifier = Modifier.width(50.dp))
 
             NavItem(
                 icon = Icons.Default.BarChart,
-                isSelected = false,
-                iconSize = 28.dp,
-                onClick = {
-                    // TODO: navController.navigate("chartPage")
-                }
+                isSelected = selectedItem == BottomNavItem.Rank,
+                onClick = { /* TODO: 랭킹으로 이동 */ }
             )
-
             NavItem(
                 icon = Icons.Default.Person,
-                isSelected = false,
-                iconSize = 28.dp,
-                onClick = {
-                    // TODO: navController.navigate("profilePage")
-                }
+                isSelected = selectedItem == BottomNavItem.Profile,
+                onClick = { /* TODO: 마이페이지로 이동 */ }
             )
         }
 
-        // ✅ 카메라 버튼
+        // 카메라 버튼
         FloatingActionButton(
-            onClick = { /* TODO: 카메라 클릭 처리 */ },
+            onClick = { /* TODO: 카메라로 이동 */ },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .offset(y = (-28).dp)
@@ -746,7 +730,7 @@ fun Modifier.customShadow(
     }
 )
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable//-->퀴즈1 문제페이지
 fun Quiz1QuestionScreen() {
 
@@ -799,11 +783,10 @@ fun Quiz1QuestionScreen() {
 
                 )
 
-                // ✅ 점수 (우측)
                 Text(
-                    text = "89 P", // 임시 데이터
-                    fontSize = 16.sp,
-                    color = Color.Black,
+                    text = "89 P",
+                    fontSize = 13.sp,
+                    color = Color.Gray,
                     fontFamily = pretendardsemibold
                 )
             }
@@ -867,7 +850,7 @@ fun Quiz1QuestionScreen() {
     }
 }}
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable//-->퀴즈1 해설페이지
 fun Quiz1AnswerScreen() {
 
@@ -918,8 +901,8 @@ fun Quiz1AnswerScreen() {
 
                 Text(
                     text = "89 P",
-                    fontSize = 16.sp,
-                    color = Color.Black,
+                    fontSize = 13.sp,
+                    color = Color.Gray,
                     fontFamily = pretendardsemibold
                 )
             }
@@ -1057,8 +1040,8 @@ fun Quiz2QuestionScreen() {
 
                 Text(
                     text = "89 P",
-                    fontSize = 16.sp,
-                    color = Color.Black,
+                    fontSize = 13.sp,
+                    color = Color.Gray,
                     fontFamily = pretendardsemibold
                 )
             }
@@ -1243,8 +1226,8 @@ fun Quiz3QuestionScreen() {
 
                 Text(
                     text = "89 P",
-                    fontSize = 16.sp,
-                    color = Color.Black,
+                    fontSize = 13.sp,
+                    color = Color.Gray,
                     fontFamily = pretendardsemibold
                 )
             }
@@ -1382,8 +1365,8 @@ fun Quiz4QuestionScreen() {
 
                 Text(
                     text = "89 P",
-                    fontSize = 16.sp,
-                    color = Color.Black,
+                    fontSize = 13.sp,
+                    color = Color.Gray,
                     fontFamily = pretendardsemibold
                 )
             }
@@ -1488,15 +1471,312 @@ fun Quiz4QuestionScreen() {
     }
 }
 
+@Composable
+fun CameraScreenContent(
+    selectedTab: String,
+    onTabChange: (String) -> Unit,
+    onCaptureClick: () -> Unit,
+    pretendardbold: FontFamily,
+) {
+    RequestCameraPermission {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 30.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // 🔙 뒤로가기 버튼 (왼쪽)
+                IconButton(onClick = { /* TODO: 뒤로가기 */ }) {
+                    Icon(
+                        imageVector = Icons.Rounded.ArrowBackIosNew,
+                        contentDescription = "뒤로 가기",
+                        tint = Color.White,
+                        modifier = Modifier.size(25.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(20.dp))
+
+                // 🔘 탭 스위치 (오른쪽)
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.DarkGray),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    listOf("폐기물 분리", "분리배출 표시").forEach { tab ->
+                        Text(
+                            text = tab,
+                            fontFamily = pretendardbold,
+                            fontSize = 16.sp,
+                            color = if (tab == selectedTab) Color.White else Color.LightGray,
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(if (tab == selectedTab) Color(0xFF00A6C4) else Color.Transparent)
+                                .clickable { onTabChange(tab) }
+                                .padding(horizontal = 20.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+
+            // 🔳 카메라 프리뷰 영역 (가운데)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(550.dp) // ✅ 원하는 높이 지정
+                    .padding(horizontal = 16.dp)
+            ) {
+                CameraPreviewView(
+                    context = LocalContext.current,
+                    lifecycleOwner = LocalLifecycleOwner.current,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 📸 하단 촬영 버튼
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 15.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton (
+                onClick = onCaptureClick,
+                modifier = Modifier.size(90.dp))// 버튼 크기
+                    {
+                    Icon(
+                        imageVector = Icons.Default.Circle,
+                        contentDescription = "촬영",
+                        modifier = Modifier.size(75.dp),
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable//-->카메라페이지
+fun CameraScreenPreview() {
+    val pretendardbold = FontFamily(Font(R.font.pretendardbold))
+    var selectedTab by remember { mutableStateOf("폐기물 분리") }
+
+    if (!LocalInspectionMode.current) {
+        CameraScreenContent(
+            selectedTab = selectedTab,
+            onTabChange = { selectedTab = it },
+            onCaptureClick = { },
+            pretendardbold = pretendardbold
+        )
+    } else {
+        // Preview 전용 대체 UI
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.DarkGray),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("📷 카메라 화면은\n미리보기에 표시되지 않아요", color = Color.White, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable//-->카메라뷰
+fun CameraPreviewView(
+    context: Context,
+    lifecycleOwner: LifecycleOwner,
+    modifier: Modifier = Modifier
+) {
+    val previewView = remember { PreviewView(context) }
+    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+
+    if (!LocalInspectionMode.current) {
+        AndroidView(
+            factory = { previewView },
+            modifier = modifier
+        )
+
+        LaunchedEffect(Unit) {
+            val cameraProvider = cameraProviderFuture.get()
+            val preview = CameraXPreview.Builder().build().also {
+                it.setSurfaceProvider(previewView.surfaceProvider)
+            }
+
+            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+            try {
+                cameraProvider.unbindAll()
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector,
+                    preview
+                )
+            } catch (e: Exception) {
+                Log.e("CameraPreview", "카메라 바인딩 실패", e)
+            }
+        }
+    } else {
+        // Preview 모드일 땐 단순 Box로 대체
+        Box(
+            modifier = modifier
+                .background(Color.DarkGray)
+                .fillMaxWidth()
+                .height(550.dp) // ✅ 원하는 높이 지정
+                .padding(horizontal = 16.dp), // ✅ 원하는 높이 지정
+            contentAlignment = Alignment.Center
+        ) {
+            Text("카메라 미리보기", color = Color.White)
+        }
+    }
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable//-->카메라 권한 요청
+fun RequestCameraPermission(content: @Composable () -> Unit) {
+    val permissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
+
+    when (permissionState.status) {
+        is com.google.accompanist.permissions.PermissionStatus.Granted -> {
+            content() // 권한 허용됨 → 콘텐츠 보여주기
+        }
+
+        is com.google.accompanist.permissions.PermissionStatus.Denied -> {
+            LaunchedEffect(Unit) {
+                permissionState.launchPermissionRequest()
+            }
+
+            // 거부된 경우 → 안내 메시지
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "카메라 권한이 필요합니다",
+                    color = Color.White,
+                    fontSize = 16.sp
+                )
+            }
+        }
+    }
+}
 
 
+//@Preview(showBackground = true)
+@Composable
+fun GuideResultScreen() {
 
+    val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
 
+    Scaffold(
+        bottomBar = { BottomNavigationBar(selectedItem = BottomNavItem.None) }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(Color(0xFF7AC5D3))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(
+                        top = 40.dp, // ✅ 상단 여백 명시
+                        start = 16.dp,
+                        end = 16.dp
+                    )
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .background(Color.White)
+                    .height(800.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(30.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // 🔹 상단 바
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { /* TODO 뒤로가기 */ }) {
+                            Icon(
+                                imageVector = Icons.Rounded.ArrowBackIosNew,
+                                modifier = Modifier.size(25.dp),
+                                tint = Color.Gray,
+                                contentDescription = "뒤로 가기"
+                            )
+                        }
 
+                        Text(
+                            text = "분리배출 도우미",
+                            fontSize = 18.sp,
+                            color = Color.Black,
+                            fontFamily = pretendardsemibold
+                        )
 
+                        IconButton(onClick = { /* TODO 닫기 */ }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                modifier = Modifier.size(28.dp),
+                                tint = Color.Gray,
+                                contentDescription = "닫기"
+                            )
+                        }
+                    }
 
+                    // 🔹 이미지 박스 (중앙 위치)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.Gray)
+                            .fillMaxWidth(0.8f)
+                            .aspectRatio(1f)
+                    ) {
+                        // TODO: 실제 이미지로 교체
+                        Image(
+                            painter = ColorPainter(Color.LightGray),
+                            contentDescription = "촬영 이미지",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
 
+                    // 🔹 문제 텍스트
+                    Text(
+                        text = "내용물을 비우고 이물질을 제거하여\n 비닐류에 배출해주세요!",
+                        fontSize = 20.sp,
+                        color = Color.Black,
+                        fontFamily = pretendardsemibold,
+                        textAlign = TextAlign.Center
+                    )
 
-
-
-
+                    // 🔹 점수 추가 텍스트
+                    Text(
+                        text = "+ 10 P",
+                        fontSize = 16.sp,
+                        color = Color.Gray,
+                        fontFamily = pretendardsemibold,
+                        textAlign = TextAlign.Center
+                    )
+                    }
+                }
+            }
+        }
+    }
