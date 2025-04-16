@@ -1,38 +1,28 @@
-package com.example.planet.ui
+package com.example.planet
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.planet.data.QuizDatabase
-import com.example.planet.data.QuizQuestionEntity
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import android.content.Context
+import android.util.Log
+import androidx.compose.runtime.LaunchedEffect
+import com.example.planet.data.AppDatabase
+import com.example.planet.data.User
 
-class QuizViewModel(application: Application) : AndroidViewModel(application) {  // ✅ 클래스!
+object DatabaseInitializer {
+    fun initialize(context: Context) {
+        val db = AppDatabase.getDatabase(context)
+        val userDao = db.userDao()
 
-    private val quizDao = QuizDatabase.getDatabase(application).quizQuestionDao()
-
-    private val _quizList = MutableStateFlow<List<QuizQuestionEntity>>(emptyList())
-    val quizList: StateFlow<List<QuizQuestionEntity>> = _quizList
-
-    private val _currentIndex = MutableStateFlow(0)
-    val currentIndex: StateFlow<Int> = _currentIndex
-
-    init {
-        loadQuestions()
-    }
-
-    private fun loadQuestions() {
-        viewModelScope.launch {
-            val result = quizDao.getAllQuestions()
-            _quizList.value = result
-        }
-    }
-
-    fun nextQuestion() {
-        if (_currentIndex.value < _quizList.value.size - 1) {
-            _currentIndex.value += 1
+        LaunchedEffect(Unit) {
+            userDao.insert(
+                User(
+                    classId = 1,
+                    name = "홍길동",
+                    score = 100,
+                    ranking = 1,
+                    profilePhotoPath = ""
+                )
+            )
+            val users = userDao.getAll()
+            Log.d("DB", "사용자 목록: $users")
         }
     }
 }

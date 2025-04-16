@@ -16,7 +16,6 @@ import androidx.lifecycle.LifecycleOwner
 
 // Compose Runtime & Core
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,31 +24,24 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.*
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.*
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.times
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.platform.LocalInspectionMode
 
 // Compose Foundation
-import androidx.compose.foundation.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -60,7 +52,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -80,40 +71,64 @@ import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
-import androidx.compose.material.icons.automirrored.filled.*
-import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.rounded.ArrowBackIosNew
+import androidx.lifecycle.lifecycleScope
 
 // 권한 처리
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
 
-
-
+// kotlinx.coroutines 패키지
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private var showSplash by mutableStateOf(true)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 2초 후 splash 화면 종료 (false 설정)
+        lifecycleScope.launch {
+            delay(2000)
+            showSplash = false
+        }
+
         setContent {
             MaterialTheme {
-                HomeScreen()
-                BottomNavigationBar()
-                StudyQuizPage()
-                Quiz1QuestionScreen()
-                Quiz1AnswerScreen()
-                Quiz2QuestionScreen()
-                Quiz3QuestionScreen()
-                Quiz4QuestionScreen()
-                CameraScreenPreview()
-                GuideResultScreen()
-                LeaderboardScreen()
-                LeaderboardList()
+                if (showSplash) {
+                    // showSplash 상태가 true면 스플래시 화면 표시
+                    SplashScreen()
+                } else {
+                    HomeScreen()
+                }
             }
         }
     }
 }
+
+@Composable
+fun SplashScreen() {
+
+    val pretendardbold = FontFamily(Font(R.font.pretendardbold))
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF18BEDD)), // 원하는 색상
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Planet",
+            fontSize = 40.sp,
+            color = Color.White,
+            fontFamily = pretendardbold
+        )
+    }
+}
+
 
 //@Preview(showBackground = true)
 @Composable
@@ -1603,7 +1618,7 @@ fun CameraScreenContent(
     }
 }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable//-->카메라페이지
 fun CameraScreenPreview() {
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
@@ -1819,14 +1834,14 @@ fun GuideResultScreen() {
         }
     }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable
 fun LeaderboardScreen() {
     val pretendard = FontFamily(Font(R.font.pretendardsemibold))
     var selectedTab by remember { mutableStateOf("학생별") }
 
     Scaffold(
-        bottomBar = { BottomNavigationBar() }
+        bottomBar = { BottomNavigationBar(selectedItem = BottomNavItem.Rank) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -1980,10 +1995,6 @@ fun LeaderboardScreen() {
     }
 }
 
-
-
-
-
 @Composable
 fun PodiumItem(name: String, score: Int, rank: Int, modifier: Modifier = Modifier) {
     val avatarColor = when (rank) {
@@ -2036,8 +2047,6 @@ fun PodiumItem(name: String, score: Int, rank: Int, modifier: Modifier = Modifie
         }
     }
 }
-
-
 
 @Composable
 fun LeaderboardRow(rank: Int, name: String, score: Int, color: Color, isMe: Boolean = false) {
