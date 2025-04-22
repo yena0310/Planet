@@ -146,14 +146,6 @@ fun HomeScreen(navController: NavHostController) {
 
     val iconTint = Color(0xFF546A6E)
 
-    Scaffold(
-        bottomBar = { BottomNavigationBar(
-            selectedItem = "home", // ✅ 문자열로 넘겨야 에러 안 남
-            onItemClick = { route -> navController.navigate(route) }
-        )
-        }
-
-    ) { innerPadding ->
 
         Column(
             modifier = Modifier
@@ -162,8 +154,8 @@ fun HomeScreen(navController: NavHostController) {
                 .padding(
                     start = 20.dp,
                     end = 20.dp,
-                    top = 70.dp,
-                    bottom = innerPadding.calculateBottomPadding()
+                    top = 70.dp
+                    //bottom = innerPadding.calculateBottomPadding()
                 )
         ) {
 
@@ -400,7 +392,7 @@ fun HomeScreen(navController: NavHostController) {
             }
         }
     }
-}
+
 
 //@Preview(showBackground = true)
 @Composable//-->메인퀴즈페이지
@@ -408,13 +400,7 @@ fun StudyQuizPage(navController: NavHostController) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
 
-    Scaffold(
-        bottomBar = { BottomNavigationBar(
-            selectedItem = "quiz",
-            onItemClick = { route -> navController.navigate(route) }
-        ) }
 
-    ) { innerPadding ->
 
         Column(
             modifier = Modifier
@@ -552,7 +538,7 @@ fun StudyQuizPage(navController: NavHostController) {
                         color = Color.White,
                         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
                     )
-                    .padding(bottom = innerPadding.calculateBottomPadding())
+
             ) {
                 Column(
                     modifier = Modifier
@@ -659,10 +645,8 @@ fun StudyQuizPage(navController: NavHostController) {
                 }
             }
         }
-    }}
+    }
 
-enum class BottomNavItem // 네비게이션바 아이템
-{ Home, Quiz, Rank, Profile, None }
 
 @Composable//-->하단 네비게이션바
 fun BottomNavigationBar(
@@ -1749,10 +1733,8 @@ fun GuideResultScreen(navController: NavHostController) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(
-            selectedItem = "guid",
-            onItemClick = { route -> navController.navigate(route) }
-    )}) { innerPadding ->
+
+    ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1857,14 +1839,10 @@ fun LeaderboardScreen(navController: NavHostController) {
     val pretendard = FontFamily(Font(R.font.pretendardsemibold))
     var selectedTab by remember { mutableStateOf("학생별") }
 
-    Scaffold(
-        bottomBar = { BottomNavigationBar(selectedItem = "leaderboard",
-            onItemClick = { route -> navController.navigate(route) }
-    )}) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                //.padding(innerPadding)
                 .background(Color(0xFFCAEBF1))
         ) {
             Column(
@@ -2011,7 +1989,7 @@ fun LeaderboardScreen(navController: NavHostController) {
             }
         }
     }
-}
+
 
 
 @Composable
@@ -2162,17 +2140,10 @@ fun LeaderboardList() {
 fun Mypage(navController: NavHostController){
     val pretendardBold = FontFamily(Font(R.font.pretendardbold))
 
-    Scaffold(
-        bottomBar = { BottomNavigationBar(
-            selectedItem = "mypage",
-            onItemClick = { route -> navController.navigate(route) }
-        )
-        }
-    ){ innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                //.padding(innerPadding)
                 .background(Color(0xFFCAEBF1))
         ) {// Settings Icon
             Icon(
@@ -2359,4 +2330,4 @@ fun Mypage(navController: NavHostController){
             // Name
             Text("김아무개", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
-    }}
+    }
