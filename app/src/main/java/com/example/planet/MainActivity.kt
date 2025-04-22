@@ -103,6 +103,7 @@ class MainActivity : ComponentActivity() {
                             composable("quiz") { StudyQuizPage(navController) }
                             composable("rank") { LeaderboardScreen(navController) }
                             composable("mypage") { Mypage(navController) }
+                            composable("camera") { CameraScreenPreview(navController) }
                         }
                     }
                 }
@@ -724,7 +725,7 @@ fun BottomNavigationBar(
 
         // 카메라 버튼
         FloatingActionButton(
-            onClick = { /* TODO: 카메라로 이동 */ },
+            onClick = { onItemClick("camera") },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .offset(y = (-28).dp)
@@ -1619,7 +1620,7 @@ fun CameraScreenContent(
 
 //@Preview(showBackground = true)
 @Composable//-->카메라페이지
-fun CameraScreenPreview() {
+fun CameraScreenPreview(navController: NavHostController) {
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
     var selectedTab by remember { mutableStateOf("폐기물 분리") }
 
