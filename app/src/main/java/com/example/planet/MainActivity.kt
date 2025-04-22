@@ -26,6 +26,12 @@ import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+
 
 // Compose Foundation
 import androidx.compose.foundation.*
@@ -45,37 +51,95 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.automirrored.rounded.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 
 // 기타
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
+            val navController = rememberNavController()
+            // ✅ Compose 내부에서만 showSplash 상태 정의
+            var showSplash by remember { mutableStateOf(true) }
+
+            // ✅ Splash 2초 후 종료
+            LaunchedEffect(Unit) {
+                delay(2000)
+                showSplash = false
+            }
+
             MaterialTheme {
-                HomeScreen()
-                BottomNavigationBar()
-                StudyQuizPage()
-                Quiz1QuestionScreen()
-                Quiz1AnswerScreen()
-                Quiz2QuestionScreen()
-                Quiz3QuestionScreen()
-                Quiz4QuestionScreen()
-                CameraScreenPreview()
-                GuideResultScreen()
-                LeaderboardScreen()
-                LeaderboardList()
+                if (showSplash) {
+                    SplashScreen()
+                } else {
+                    Scaffold(
+                        bottomBar = {
+                            BottomNavigationBar(
+                                selectedItem = getCurrentRoute(navController),
+                                onItemClick = { route -> navController.navigate(route) }
+                            )
+                        }
+                    ) { innerPadding ->
+                        NavHost(
+                            navController = navController,
+                            startDestination = "home",
+                            modifier = Modifier.padding(innerPadding)
+                        ) {
+                            composable("home") { HomeScreen(navController) }
+                            composable("quiz") { StudyQuizPage(navController) }
+                            composable("rank") { LeaderboardScreen(navController) }
+                            composable("mypage") { Mypage(navController) }
+                        }
+                    }
+                }
             }
         }
+    }
+}
+@Composable
+fun getCurrentRoute(navController: NavHostController): String {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    return navBackStackEntry?.destination?.route ?: "home"
+}
+
+
+@Composable
+fun SplashScreen() {
+
+    val pretendardbold = FontFamily(Font(R.font.pretendardbold))
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF18BEDD)), // 원하는 색상
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Planet",
+            fontSize = 40.sp,
+            color = Color.White,
+            fontFamily = pretendardbold
+        )
     }
 }
 
 //@Preview(showBackground = true)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(navController: NavHostController) {
 
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
@@ -83,7 +147,11 @@ fun HomeScreen() {
     val iconTint = Color(0xFF546A6E)
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(selectedItem = BottomNavItem.Home) }
+        bottomBar = { BottomNavigationBar(
+            selectedItem = "home", // ✅ 문자열로 넘겨야 에러 안 남
+            onItemClick = { route -> navController.navigate(route) }
+        )
+        }
 
     ) { innerPadding ->
 
@@ -146,7 +214,7 @@ fun HomeScreen() {
                         fontFamily = pretendardbold,
                         modifier = Modifier.padding(start = 15.dp)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -336,12 +404,15 @@ fun HomeScreen() {
 
 //@Preview(showBackground = true)
 @Composable//-->메인퀴즈페이지
-fun StudyQuizPage() {
+fun StudyQuizPage(navController: NavHostController) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(selectedItem = BottomNavItem.Quiz) }
+        bottomBar = { BottomNavigationBar(
+            selectedItem = "quiz",
+            onItemClick = { route -> navController.navigate(route) }
+        ) }
 
     ) { innerPadding ->
 
@@ -596,7 +667,8 @@ enum class BottomNavItem // 네비게이션바 아이템
 @Composable//-->하단 네비게이션바
 fun BottomNavigationBar(
     modifier: Modifier = Modifier,
-    selectedItem: BottomNavItem = BottomNavItem.None
+    selectedItem: String = "none",
+    onItemClick: (String) -> Unit
 ) {
     Box(
         modifier = modifier
@@ -643,26 +715,26 @@ fun BottomNavigationBar(
         ) {
             NavItem(
                 icon = Icons.Default.Home,
-                isSelected = selectedItem == BottomNavItem.Home,
-                onClick = { /* TODO: 홈으로 이동 */ }
+                isSelected = selectedItem == "home",
+                onClick = { onItemClick("home") }
             )
             NavItem(
                 icon = Icons.Default.School,
-                isSelected = selectedItem == BottomNavItem.Quiz,
-                onClick = { /* TODO: 퀴즈로 이동 */ }
+                isSelected = selectedItem == "quiz",
+                onClick = { onItemClick("quiz") }
             )
 
             Spacer(modifier = Modifier.width(50.dp))
 
             NavItem(
                 icon = Icons.Default.BarChart,
-                isSelected = selectedItem == BottomNavItem.Rank,
-                onClick = { /* TODO: 랭킹으로 이동 */ }
+                isSelected = selectedItem == "rank",
+                onClick = { onItemClick("rank") }
             )
             NavItem(
                 icon = Icons.Default.Person,
-                isSelected = selectedItem == BottomNavItem.Profile,
-                onClick = { /* TODO: 마이페이지로 이동 */ }
+                isSelected = selectedItem == "mypage",
+                onClick = { onItemClick("mypage") }
             )
         }
 
@@ -1561,7 +1633,7 @@ fun CameraScreenContent(
     }
 }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable//-->카메라페이지
 fun CameraScreenPreview() {
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
@@ -1672,13 +1744,15 @@ fun RequestCameraPermission(content: @Composable () -> Unit) {
 
 //@Preview(showBackground = true)
 @Composable
-fun GuideResultScreen() {
+fun GuideResultScreen(navController: NavHostController) {
 
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(selectedItem = BottomNavItem.None) }
-    ) { innerPadding ->
+        bottomBar = { BottomNavigationBar(
+            selectedItem = "guid",
+            onItemClick = { route -> navController.navigate(route) }
+    )}) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1777,15 +1851,16 @@ fun GuideResultScreen() {
         }
     }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable
-fun LeaderboardScreen() {
+fun LeaderboardScreen(navController: NavHostController) {
     val pretendard = FontFamily(Font(R.font.pretendardsemibold))
     var selectedTab by remember { mutableStateOf("학생별") }
 
     Scaffold(
-        bottomBar = { BottomNavigationBar() }
-    ) { innerPadding ->
+        bottomBar = { BottomNavigationBar(selectedItem = "leaderboard",
+            onItemClick = { route -> navController.navigate(route) }
+    )}) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1939,9 +2014,6 @@ fun LeaderboardScreen() {
 }
 
 
-
-
-
 @Composable
 fun PodiumItem(name: String, score: Int, rank: Int, modifier: Modifier = Modifier) {
     val avatarColor = when (rank) {
@@ -1994,7 +2066,6 @@ fun PodiumItem(name: String, score: Int, rank: Int, modifier: Modifier = Modifie
         }
     }
 }
-
 
 
 @Composable
@@ -2085,3 +2156,207 @@ fun LeaderboardList() {
         }
     }
 }
+
+//@Preview(showBackground = true)
+@Composable
+fun Mypage(navController: NavHostController){
+    val pretendardBold = FontFamily(Font(R.font.pretendardbold))
+
+    Scaffold(
+        bottomBar = { BottomNavigationBar(
+            selectedItem = "mypage",
+            onItemClick = { route -> navController.navigate(route) }
+        )
+        }
+    ){ innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(Color(0xFFCAEBF1))
+        ) {// Settings Icon
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Settings",
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 50.dp, end=20.dp)
+                    .size(28.dp),
+                tint = Color.Gray
+            )
+
+
+
+            // 흰색 카드 박스
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 160.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.weight(1f))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 25.dp, end = 25.dp)
+                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                        .background(Color.White)
+                        .height(600.dp)
+                ) {
+                    Text(
+                        text = "한국초등학교\n1학년 1반",
+                        fontSize = 12.sp,
+                        fontFamily = pretendardBold,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(start = 24.dp, top=20.dp) // 왼쪽 패딩만 줌
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 100.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Rank box
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(80.dp)
+                                .background(Color.White)
+                                .customShadow()
+                                .background(Color(0xFF7AD1E0), RoundedCornerShape(16.dp))
+                                .padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "내 등수\n#6",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF343434),
+                                textAlign = TextAlign.Center,
+                                //modifier = Modifier.fillMaxWidth(0.4f)
+                            )
+                            // ✅ 수직 선 (Divider)
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .height(36.dp) // 선의 높이
+                                    .background(Color(0xFF0C092A).copy(alpha = 0.3f)) // 연한 검정
+                            )
+                            Text(
+                                "학급 등수\n#14",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF343434),
+                                textAlign = TextAlign.Center,
+                                //modifier = Modifier.fillMaxWidth(0.4f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Quiz progress box
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(500.dp)
+                                .background(Color(0xFFBCE4EC), RoundedCornerShape(16.dp))
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                buildAnnotatedString {
+                                    append("지금까지 총 ")
+                                    withStyle(style = SpanStyle(color = Color(0xFF259CB2))) {
+                                        append("75문제")
+                                    }
+                                    append("를 풀었어요!")
+                                },
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            // Circular progress indicator
+                            Box(
+                                modifier = Modifier.size(160.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // 배경 원: 흰색 전체 100%
+                                CircularProgressIndicator(
+                                    progress = {1f},
+                                    modifier = Modifier.fillMaxSize(),
+                                    color = Color.White,
+                                    strokeWidth = 12.dp
+                                )
+
+                                // 실제 진행도: 75%
+                                CircularProgressIndicator(
+                                    progress = {0.75f},
+                                    modifier = Modifier.fillMaxSize(),
+                                    color = Color(0xFF28B6CC),
+                                    strokeWidth = 12.dp
+                                )
+
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Row(verticalAlignment = Alignment.Bottom) {
+                                        Text("75", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0A0A32))
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                        Text("/100", fontSize = 16.sp, color = Color(0x8028B6CC))
+                                    }
+                                    Text("quiz played", fontSize = 16.sp, color = Color.Gray) // ✅ 원 안에 들어감
+                                }
+
+                            }
+
+                        }
+                    }
+
+                }
+            }
+        }
+        // 프로필 영역 전체
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 100.dp), // 🔽 화면 아래로 내림
+            horizontalAlignment = Alignment.CenterHorizontally // 🔽 가운데 정렬
+        ){
+        Box(
+            contentAlignment = Alignment.BottomEnd,
+            modifier = Modifier
+                .size(100.dp) // 프로필 이미지 전체 크기
+        ) {
+            // 핑크색 원
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFD69ACC)) // 연한 분홍색
+            )
+
+            // ✏️ 편집 아이콘
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .offset(x = (-6).dp, y = (-6).dp)
+                    .border(2.dp, Color.Gray, CircleShape)
+                    .background(Color.White, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit Profile",
+                    modifier = Modifier.size(18.dp),
+                    tint = Color.Gray
+                )
+            }
+        }
+            Spacer(modifier = Modifier.height(10.dp))
+            // Name
+            Text("김아무개", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+    }}

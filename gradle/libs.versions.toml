@@ -33,6 +33,11 @@ androidx-constraintlayout = { group = "androidx.constraintlayout", name = "const
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-compose-ui = "androidx.compose.ui:ui:${versions.compose}"
+androidx-compose-ui-graphics = "androidx.compose.ui:ui-graphics:${versions.compose}"
+androidx-compose-ui-tooling-preview = "androidx.compose.ui:ui-tooling-preview:${versions.compose}"
+androidx-compose-ui-tooling = "androidx.compose.ui:ui-tooling:${versions.compose}"
+androidx-compose-ui-test-manifest = "androidx.compose.ui:ui-test-manifest:${versions.compose}"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
