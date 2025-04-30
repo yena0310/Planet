@@ -1,6 +1,7 @@
 package com.example.planet
 
 // Android 기본
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
@@ -68,20 +69,86 @@ import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageCapture.OutputFileOptions
+import androidx.camera.core.Camera
+
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.core.content.ContextCompat
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+
+
+import androidx.activity.compose.setContent
+import androidx.camera.core.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.navigation.compose.*
+import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+
+import com.example.planet.Yolov8sDetector
+
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+
+
 class MainActivity : ComponentActivity() {
+
+    public lateinit var imageCapture: ImageCapture
+    private lateinit var cameraExecutor: ExecutorService
+    private lateinit var detector: Yolov8sDetector
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        detector = Yolov8sDetector(this) // YOLO 모델 로드
+        cameraExecutor = Executors.newSingleThreadExecutor()
+
+
         setContent {
             val navController = rememberNavController()
-            // ✅ Compose 내부에서만 showSplash 상태 정의
             var showSplash by remember { mutableStateOf(true) }
+            val context = LocalContext.current
 
-            // ✅ Splash 2초 후 종료
             LaunchedEffect(Unit) {
                 delay(2000)
                 showSplash = false
+
+                val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test_image)
+
+                try {
+                    val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test_image)
+                    Log.d("YOLO-TEST", "Bitmap loaded successfully")
+
+                    val results = detector.detect(bitmap)
+                    Log.d("YOLO-TEST", "Detection result size: ${results.size}")
+
+                    results.forEach {
+                        Log.d("YOLO-TEST", "Detected class=${it.classId}, confidence=${it.confidence}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("YOLO-TEST", "Error during detection: ${e.message}", e)
+                }
             }
+
+
 
             MaterialTheme {
                 if (showSplash) {
@@ -89,7 +156,6 @@ class MainActivity : ComponentActivity() {
                 } else {
                     Scaffold(
                         bottomBar = {
-                            // 👇 현재 경로가 "camera"가 아닐 때만 네비게이션 바 보이게
                             val currentRoute = getCurrentRoute(navController)
                             if (currentRoute != "camera") {
                                 BottomNavigationBar(
@@ -108,21 +174,63 @@ class MainActivity : ComponentActivity() {
                             composable("quiz") { StudyQuizPage(navController) }
                             composable("rank") { LeaderboardScreen(navController) }
                             composable("mypage") { Mypage(navController) }
-                            composable("camera") { CameraScreenPreview(navController) }
                             composable("quiz1") { Quiz1QuestionScreen(navController) }
                             composable("quiz1_answer") { Quiz1AnswerScreen(navController) }
                             composable("quiz2") { Quiz2QuestionScreen(navController) }
                             composable("quiz2_answer") { Quiz2AnswerScreen(navController) }
                             composable("quiz4") { Quiz4QuestionScreen(navController) }
                             composable("quiz4_answer") { Quiz4AnswerScreen(navController) }
-                            composable("camera") { CameraScreenPreview(navController) }
+                            composable("camera") {
+                                CameraScreenContent(
+                                    navController = navController,
+                                    selectedTab = "폐기물 분리",
+                                    onTabChange = { /* 탭 변경 로직 */ },
+                                    onCaptureClick = { takePhoto() },
+                                    pretendardbold = FontFamily.Default
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+
+
+
+    // ✅ 여기로 이동 (MainActivity 안, onCreate 밖)
+    fun takePhoto() {
+        val capture = imageCapture ?: return
+
+        capture.takePicture(
+            ContextCompat.getMainExecutor(this),
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onCaptureSuccess(imageProxy: ImageProxy) {
+                    val bitmap = imageProxyToBitmap(imageProxy)
+                    imageProxy.close()
+
+                    val results = detector.detect(bitmap)
+
+                }
+                override fun onError(exception: ImageCaptureException) {
+                    Log.e("CameraX", "사진 캡처 실패", exception)
+                }
+            }
+        )
+    }
+
+    private fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap {
+        val buffer: ByteBuffer = imageProxy.planes[0].buffer
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    }
 }
+
+
+
+
+
 @Composable
 fun getCurrentRoute(navController: NavHostController): String {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -159,7 +267,7 @@ fun HomeScreen(navController: NavHostController) {
     val iconTint = Color(0xFF546A6E)
 
 
-        Column(
+    Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFCAEBF1))
@@ -407,6 +515,7 @@ fun HomeScreen(navController: NavHostController) {
 
 
 //@Preview(showBackground = true)
+@SuppressLint("SuspiciousIndentation")
 @Composable//-->메인퀴즈페이지
 fun StudyQuizPage(navController: NavHostController) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
@@ -1828,6 +1937,7 @@ fun CameraScreenContent(
     onCaptureClick: () -> Unit,
     pretendardbold: FontFamily,
 ) {
+
     RequestCameraPermission {
         Column(
             modifier = Modifier
@@ -1921,7 +2031,7 @@ fun CameraScreenContent(
 
 //@Preview(showBackground = true)
 @Composable//-->카메라페이지
-fun CameraScreenPreview(navController: NavHostController) {
+fun CameraScreenPreview(navController: NavHostController, mainActivity: MainActivity) {
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
     var selectedTab by remember { mutableStateOf("폐기물 분리") }
 
@@ -1930,7 +2040,7 @@ fun CameraScreenPreview(navController: NavHostController) {
             navController = navController,
             selectedTab = selectedTab,
             onTabChange = { selectedTab = it },
-            onCaptureClick = { /* TODO: 촬영 버튼 동작 */ },
+            onCaptureClick = {mainActivity.takePhoto()},
             pretendardbold = pretendardbold
         )
     } else {
@@ -1954,7 +2064,7 @@ fun CameraPreviewView(
     modifier: Modifier = Modifier
 ) {
     val previewView = remember { PreviewView(context) }
-    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+    val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
     if (!LocalInspectionMode.current) {
         AndroidView(
@@ -1964,9 +2074,14 @@ fun CameraPreviewView(
 
         LaunchedEffect(Unit) {
             val cameraProvider = cameraProviderFuture.get()
-            val preview = CameraXPreview.Builder().build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
+            // ✅ Preview Builder (고쳤음)
+            val preview = CameraXPreview.Builder().build()
+            preview.setSurfaceProvider(previewView.surfaceProvider)
+            // ⬇️ 추가된 부분 (imageCapture 생성)
+            val imageCapture = ImageCapture.Builder()
+                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                .build()
+            // ⬆️ 추가된 부분
 
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
@@ -1975,8 +2090,10 @@ fun CameraPreviewView(
                 cameraProvider.bindToLifecycle(
                     lifecycleOwner,
                     cameraSelector,
-                    preview
+                    preview,
+                    imageCapture  // ⬅️ 여기에도 imageCapture 추가 바인딩
                 )
+                (context as MainActivity).imageCapture = imageCapture // ⬅️ MainActivity에 연결
             } catch (e: Exception) {
                 Log.e("CameraPreview", "카메라 바인딩 실패", e)
             }

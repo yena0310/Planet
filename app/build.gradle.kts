@@ -97,4 +97,6 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.ui.test.junit4)
+
+    implementation("org.tensorflow:tensorflow-lite:2.13.0")
 }
