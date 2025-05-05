@@ -2,8 +2,10 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.google.ksp) // ✅ KSP 적용
+    alias(libs.plugins.kotlin.compose)
 
     id("org.jetbrains.kotlin.kapt")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -42,9 +44,6 @@ android {
     buildFeatures {
         compose = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
-    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -72,6 +71,7 @@ dependencies {
 
     // Compose Material & Material3
     implementation(libs.androidx.material3)
+    implementation("androidx.compose.material:material:1.6.0")
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
 
     // ConstraintLayout for Compose
@@ -87,6 +87,7 @@ dependencies {
     implementation("androidx.camera:camera-camera2:1.3.0")
     implementation("androidx.camera:camera-lifecycle:1.3.0")
     implementation("androidx.camera:camera-view:1.3.0")
+
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
     // Permissions
@@ -98,5 +99,16 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.ui.test.junit4)
 
+    implementation(platform("com.google.firebase:firebase-bom:33.13.0"))    // Firebase BoM
+    implementation("com.google.firebase:firebase-auth-ktx")    // Firebase Auth
+    implementation("com.google.firebase:firebase-database-ktx")    // Firebase Realtime Database
+    implementation("com.google.firebase:firebase-firestore-ktx")    // Firebase Firestore
+
+    // TODO: Add the dependencies for Firebase products you want to use
+    // When using the BoM, don't specify versions in Firebase dependencies
+    // https://firebase.google.com/docs/android/setup#available-libraries
+
     implementation("org.tensorflow:tensorflow-lite:2.13.0")
+
+    implementation("com.google.guava:guava:32.1.2-android")
 }
