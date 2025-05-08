@@ -100,9 +100,9 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
 
     implementation(platform("com.google.firebase:firebase-bom:33.13.0"))    // Firebase BoM
-    implementation("com.google.firebase:firebase-auth-ktx")    // Firebase Auth
-    implementation("com.google.firebase:firebase-database-ktx")    // Firebase Realtime Database
-    implementation("com.google.firebase:firebase-firestore-ktx")    // Firebase Firestore
+    implementation("com.google.firebase:firebase-auth")    // Firebase Auth
+    implementation("com.google.firebase:firebase-database")    // Firebase Realtime Database
+    implementation("com.google.firebase:firebase-firestore")    // Firebase Firestore
 
     // TODO: Add the dependencies for Firebase products you want to use
     // When using the BoM, don't specify versions in Firebase dependencies

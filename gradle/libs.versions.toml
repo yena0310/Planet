@@ -10,7 +10,8 @@ activityCompose = "1.8.0"
 composeBom = "2024.04.01"
 constraintlayout = "2.2.1"
 room = "2.6.1"
-ksp = "1.9.0-1.0.13"
+ksp = "2.1.20-2.0.1"
+firebaseDatabase = "21.0.0"
 
 
 [libraries]
@@ -38,6 +39,7 @@ androidx-compose-ui-graphics = "androidx.compose.ui:ui-graphics:${versions.compo
 androidx-compose-ui-tooling-preview = "androidx.compose.ui:ui-tooling-preview:${versions.compose}"
 androidx-compose-ui-tooling = "androidx.compose.ui:ui-tooling:${versions.compose}"
 androidx-compose-ui-test-manifest = "androidx.compose.ui:ui-test-manifest:${versions.compose}"
+firebase-database = { group = "com.google.firebase", name = "firebase-database", version.ref = "firebaseDatabase" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
