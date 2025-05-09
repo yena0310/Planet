@@ -12,7 +12,11 @@ import java.io.ByteArrayOutputStream
 
 class LabelDetector(private val context: Context) {
 
-    fun process(bitmap: Bitmap, onResult: (String) -> Unit, onError: (String) -> Unit) {
+    fun process(
+        bitmap: Bitmap,
+        onResult: (Bitmap, String) -> Unit,
+        onError: (Bitmap, String) -> Unit
+    ) {
         val stream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
         val requestBody = stream.toByteArray()
@@ -31,14 +35,14 @@ class LabelDetector(private val context: Context) {
                 response: Response<GuideResponse>
             ) {
                 if (response.isSuccessful && response.body() != null) {
-                    onResult(response.body()!!.guide)
+                    onResult(bitmap, response.body()!!.guide)
                 } else {
-                    onError("서버 응답 오류: ${response.code()}")
+                    onError(bitmap, "서버 응답 오류: ${response.code()}")
                 }
             }
 
             override fun onFailure(call: Call<GuideResponse>, t: Throwable) {
-                onError("네트워크 오류: ${t.message}")
+                onError(bitmap, "네트워크 오류: ${t.message}")
             }
         })
     }

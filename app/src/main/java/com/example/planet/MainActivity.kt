@@ -78,6 +78,7 @@ import androidx.camera.core.ImageProxy
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -111,9 +112,15 @@ class MainActivity : ComponentActivity() {
     private lateinit var labelDetector: LabelDetector
 
     companion object {
-        var latestGuideText: String = "가이드를 불러오는 중입니다."
-        var latestCapturedBitmap: Bitmap? = null
+        // 폐기물 분리
+        var wasteGuideText: String = "가이드를 불러오는 중입니다."
+        var wasteCapturedBitmap: Bitmap? = null
+
+        // 분리배출 표시
+        var labelGuideText: String = ""
+        var labelCapturedBitmap: Bitmap? = null
     }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -178,10 +185,8 @@ class MainActivity : ComponentActivity() {
                             composable("rank") { LeaderboardScreen(navController) }
                             composable("mypage") { Mypage(navController) }
                             composable("camera") { CameraScreenPreview(navController, this@MainActivity) }
-                            composable("guide") { GuideResultScreen(navController) }
-                            composable("guide_result") {
-                                GuideResultScreen(navController = navController, guideText = latestGuideText)
-                            }
+                            composable("recycle_sign_guide") { RecycleSignGuide(navController, guideText = labelGuideText) }
+                            composable("waste_guide") { GuideResultScreen(navController, guideText = wasteGuideText) }
                             composable("study_quiz") { StudyQuizPage(navController) }
                             composable("matching_quiz") {
                                 QuizMatchingQuestionScreen(
@@ -227,6 +232,11 @@ class MainActivity : ComponentActivity() {
     }
 
     fun takePhoto(navController: NavHostController) {
+        if (!::imageCapture.isInitialized) {
+            Log.w("Camera", "imageCapture not initialized")
+            Toast.makeText(this, "카메라 준비 중입니다. 잠시 후 다시 시도해주세요.", Toast.LENGTH_SHORT).show()
+            return
+        }
         val capture = imageCapture ?: return
 
         capture.takePicture(
@@ -235,16 +245,22 @@ class MainActivity : ComponentActivity() {
                 override fun onCaptureSuccess(imageProxy: ImageProxy) {
                     val bitmap = imageProxyToBitmap(imageProxy)
                     imageProxy.close()
-                    // 클래스 목록 확인 (한 번만 보면 되니 로그 확인 후 지워도 됩니다)
 
                     val results = detector.detect(bitmap)
                     if (results.isNotEmpty()) {
-                        latestGuideText = results[0].guide
-                        latestCapturedBitmap = bitmap
-                        navController.navigate("guide_result")
+                        wasteGuideText = results[0].guide
+                        wasteCapturedBitmap = bitmap
+                        navController.navigate("waste_guide")
+                    } else {
+                        wasteGuideText = "사진을 인식하지 못했습니다.\n다시 촬영해주세요."
+                        wasteCapturedBitmap = bitmap
+                        navController.navigate("waste_guide")
                     }
                 }
                 override fun onError(exception: ImageCaptureException) {
+                    wasteCapturedBitmap = null
+                    wasteGuideText = "촬영에 실패했습니다.\n다시 시도해주세요."
+                    navController.navigate("waste_guide")
                     Log.e("Camera", "촬영 실패", exception)
                 }
             }
@@ -259,6 +275,12 @@ class MainActivity : ComponentActivity() {
     }
 
     fun takeLabelPhoto(navController: NavHostController) {
+        if (!::imageCapture.isInitialized) {
+            Log.w("Camera", "imageCapture not initialized")
+            Toast.makeText(this, "카메라 준비 중입니다. 잠시 후 다시 시도해주세요.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val capture = imageCapture ?: return
 
         capture.takePicture(
@@ -270,21 +292,48 @@ class MainActivity : ComponentActivity() {
 
                     labelDetector.process(
                         bitmap,
-                        onResult = { guideText ->
-                            navController.navigate("guide_result/${Uri.encode(guideText)}")
+                        onResult = { resultBitmap, guideText ->
+                            labelCapturedBitmap = resultBitmap
+                            labelGuideText = guideText
+                            navController.navigate("recycle_sign_guide")
                         },
-                        onError = { error ->
-                            Log.e("LabelDetector", "오류: $error")
+                        onError = { resultBitmap, _ ->
+                            labelGuideText = "분리배출 표시를 인식하지 못했습니다.\n다시 촬영해주세요 :("
+                            labelCapturedBitmap = resultBitmap
+                            navController.navigate("recycle_sign_guide")
                         }
                     )
                 }
 
                 override fun onError(exception: ImageCaptureException) {
+                    labelCapturedBitmap = null
+                    labelGuideText = "촬영에 실패했습니다.\n다시 시도해주세요."
+                    navController.navigate("recycle_sign_guide")
                     Log.e("Camera", "촬영 실패", exception)
                 }
             }
         )
     }
+
+    // 테스트 이미지
+    fun processDummyLabelImage(navController: NavHostController) {
+        val dummyBitmap = BitmapFactory.decodeResource(resources, R.drawable.test9)
+
+        labelDetector.process(
+            dummyBitmap,
+            onResult = { resultBitmap, guideText ->
+                labelCapturedBitmap = resultBitmap
+                labelGuideText = guideText
+                navController.navigate("recycle_sign_guide")
+            },
+            onError = { resultBitmap, _ ->
+                labelGuideText = "분리배출 표시를 인식하지 못했습니다.\n다시 촬영해주세요 :("
+                labelCapturedBitmap = resultBitmap
+                navController.navigate("recycle_sign_guide")
+            }
+        )
+    }
+
 }
 
 @Composable
@@ -1869,8 +1918,7 @@ fun CameraScreenPreview(navController: NavHostController, mainActivity: MainActi
                 if (selectedTab == "폐기물 분리") {
                     mainActivity.takePhoto(navController)
                 } else {
-                    mainActivity.takeLabelPhoto(navController)
-                    navController.navigate("guide")
+                    mainActivity.processDummyLabelImage(navController) // 테스트 이미지
                 }
             },
             pretendardbold = pretendardbold
@@ -1906,14 +1954,11 @@ fun CameraPreviewView(
 
         LaunchedEffect(Unit) {
             val cameraProvider = cameraProviderFuture.get()
-            // ✅ Preview Builder (고쳤음)
             val preview = CameraXPreview.Builder().build()
             preview.setSurfaceProvider(previewView.surfaceProvider)
-            // ⬇️ 추가된 부분 (imageCapture 생성)
             val imageCapture = ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 .build()
-            // ⬆️ 추가된 부분
 
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
@@ -1979,7 +2024,7 @@ fun RequestCameraPermission(content: @Composable () -> Unit) {
 
 //@Preview(showBackground = true)
 @Composable
-fun GuideResultScreen(navController: NavHostController) {
+fun RecycleSignGuide(navController: NavHostController, guideText: String) {
 
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val guideText = Uri.decode(navController.currentBackStackEntry?.arguments?.getString("guideText") ?: "분리배출 표시를 인식하지 못했습니다.\n다시 촬영해주세요 :(")
@@ -2054,11 +2099,20 @@ fun GuideResultScreen(navController: NavHostController) {
                             .fillMaxWidth(0.8f)
                             .aspectRatio(1f)
                     ) {
-                        Image(
-                            painter = ColorPainter(Color.LightGray),
-                            contentDescription = "촬영 이미지",
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        val bitmap = MainActivity.labelCapturedBitmap
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap.asImageBitmap(),
+                                contentDescription = "촬영 이미지",
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Image(
+                                painter = ColorPainter(Color.LightGray),
+                                contentDescription = "이미지 없음",
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
 
                     Text(
@@ -2068,11 +2122,11 @@ fun GuideResultScreen(navController: NavHostController) {
                         fontFamily = pretendardsemibold,
                         textAlign = TextAlign.Center
                     )
-                    }
                 }
             }
         }
     }
+}
 
 //@Preview(showBackground = true)
 @Composable

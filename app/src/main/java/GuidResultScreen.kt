@@ -40,7 +40,9 @@ fun GuideResultScreen(
     guideText: String
 ) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
-    val guideText = MainActivity.latestGuideText
+    val guideText = MainActivity.wasteGuideText.ifBlank {
+        "사진을 인식하지 못했습니다.\n다시 촬영해주세요 :("
+    }
     Scaffold(
 
     ) { innerPadding ->
@@ -77,7 +79,7 @@ fun GuideResultScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { /* TODO 뒤로가기 */ }) {
+                        IconButton(onClick = { navController.navigate("camera") }) {
                             Icon(
                                 imageVector = Icons.Rounded.ArrowBackIosNew,
                                 modifier = Modifier.size(25.dp),
@@ -93,7 +95,7 @@ fun GuideResultScreen(
                             fontFamily = pretendardsemibold
                         )
 
-                        IconButton(onClick = { /* TODO 닫기 */ }) {
+                        IconButton(onClick = { navController.navigate("home") }) {
                             Icon(
                                 imageVector = Icons.Rounded.Close,
                                 modifier = Modifier.size(28.dp),
@@ -111,7 +113,7 @@ fun GuideResultScreen(
                             .fillMaxWidth(0.8f)
                             .aspectRatio(1f)
                     ) {
-                        val capturedBitmap = MainActivity.latestCapturedBitmap
+                        val capturedBitmap = MainActivity.wasteCapturedBitmap
                         if (capturedBitmap != null) {
                             Image(
                                 bitmap = capturedBitmap.asImageBitmap(), // ✅ 실제 촬영된 이미지 출력
