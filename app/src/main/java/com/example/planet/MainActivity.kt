@@ -2,6 +2,7 @@ package com.example.planet
 
 // Android 기본
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 
@@ -116,6 +117,7 @@ class MainActivity : ComponentActivity() {
                             composable("quiz4") { Quiz4QuestionScreen(navController) }
                             composable("quiz4_answer") { Quiz4AnswerScreen(navController) }
                             composable("camera") { CameraScreenPreview(navController) }
+                            composable("guide") { GuideResultScreen(navController) }
                         }
                     }
                 }
@@ -1930,7 +1932,7 @@ fun CameraScreenPreview(navController: NavHostController) {
             navController = navController,
             selectedTab = selectedTab,
             onTabChange = { selectedTab = it },
-            onCaptureClick = { /* TODO: 촬영 버튼 동작 */ },
+            onCaptureClick = { navController.navigate("guide") },
             pretendardbold = pretendardbold
         )
     } else {
@@ -2029,10 +2031,10 @@ fun RequestCameraPermission(content: @Composable () -> Unit) {
 }
 
 
-//@Preview(showBackground = true)
 @Composable
 fun GuideResultScreen(navController: NavHostController) {
-
+    val context = LocalContext.current
+    val testBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test16)
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
 
     Scaffold(
@@ -2071,7 +2073,7 @@ fun GuideResultScreen(navController: NavHostController) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { /* TODO 뒤로가기 */ }) {
+                        IconButton(onClick = { navController.navigate("camera") }) {
                             Icon(
                                 imageVector = Icons.Rounded.ArrowBackIosNew,
                                 modifier = Modifier.size(25.dp),
@@ -2087,7 +2089,7 @@ fun GuideResultScreen(navController: NavHostController) {
                             fontFamily = pretendardsemibold
                         )
 
-                        IconButton(onClick = { /* TODO 닫기 */ }) {
+                        IconButton(onClick = { navController.navigate("home") }) {
                             Icon(
                                 imageVector = Icons.Rounded.Close,
                                 modifier = Modifier.size(28.dp),
@@ -2105,17 +2107,15 @@ fun GuideResultScreen(navController: NavHostController) {
                             .fillMaxWidth(0.8f)
                             .aspectRatio(1f)
                     ) {
-                        // TODO: 실제 이미지로 교체
                         Image(
-                            painter = ColorPainter(Color.LightGray),
+                            bitmap = testBitmap.asImageBitmap(),
                             contentDescription = "촬영 이미지",
                             modifier = Modifier.fillMaxSize()
                         )
                     }
 
-                    // 🔹 문제 텍스트
                     Text(
-                        text = "내용물을 비우고 이물질을 제거하여\n 비닐류에 배출해주세요!",
+                        text = "내용물을 비우고 이물질을 제거하여 유리류에 깨지지 않도록 조심히 배출해주세요. 색상별로 배출이 가능한 경우 분리배출 해주세요. 뚜껑은 철에 배출해주세요",
                         fontSize = 20.sp,
                         color = Color.Black,
                         fontFamily = pretendardsemibold,
