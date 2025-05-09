@@ -1,6 +1,7 @@
 package com.example.planet
 
 // Android 기본
+import GuideResultScreen
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
@@ -117,7 +118,10 @@ class MainActivity : ComponentActivity() {
     public lateinit var imageCapture: ImageCapture
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var detector: Yolov8sDetector
-
+    companion object {
+        var latestGuideText: String = "가이드를 불러오는 중입니다."
+        var latestCapturedBitmap: Bitmap? = null
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -133,24 +137,30 @@ class MainActivity : ComponentActivity() {
                 delay(2000)
                 showSplash = false
 
+                // ✅ 테스트용 이미지 넣기
                 val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test_image)
 
                 try {
-                    val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test_image)
-                    Log.d("YOLO-TEST", "Bitmap loaded successfully")
+                    val results = detector.detect(bitmap, confidenceThreshold = 0.1f)
+                    if (results.isEmpty()) {
+                        Log.d("YOLO-DEBUG", "결과 없음")
+                    } else {
+                        results.forEachIndexed { i, it ->
+                            Log.d("YOLO-RESULT", "[$i] classId=${it.classId}, confidence=${it.confidence}, guide=${it.guide}")
+                        }
+                    }
+                    Log.d("YOLO-DEBUG", "Test Image Detection Count: ${results.size}")
 
-                    val results = detector.detect(bitmap)
-                    Log.d("YOLO-TEST", "Detection result size: ${results.size}")
-
-                    results.forEach {
-                        Log.d("YOLO-TEST", "Detected class=${it.classId}, confidence=${it.confidence}")
+                    results.forEachIndexed { i, it ->
+                        Log.d("YOLO-CLASS", "[$i] class=${it.classId}, confidence=${it.confidence}")
+                        Log.d("YOLO-GUIDE", "guide=${it.guide}")
                     }
                 } catch (e: Exception) {
-                    Log.e("YOLO-TEST", "Error during detection: ${e.message}", e)
+                    Log.e("YOLO-ERROR", "테스트 이미지 처리 실패", e)
                 }
-            }
 
-            MaterialTheme {
+                }
+                MaterialTheme {
                 if (showSplash) {
                     SplashScreen()
                 } else {
@@ -180,11 +190,13 @@ class MainActivity : ComponentActivity() {
                                     navController = navController,
                                     selectedTab = "폐기물 분리",
                                     onTabChange = { /* 탭 변경 로직 */ },
-                                    onCaptureClick = { takePhoto() },
+                                    onCaptureClick = { takePhoto(navController) },
                                     pretendardbold = FontFamily.Default
                                 )
                             }
-
+                            composable("guide_result") {
+                                GuideResultScreen(navController = navController, guideText = latestGuideText)
+                            }
                             composable("study_quiz") { StudyQuizPage(navController) }
                             // 매칭 퀴즈 경로 등록
                             composable("matching_quiz") {
@@ -194,7 +206,6 @@ class MainActivity : ComponentActivity() {
                                     index = 10 // 11번째 문제라면 10
                                 )
                             }
-
                             composable(
                                 route = "quiz_question/{index}",
                                 arguments = listOf(navArgument("index") { type = NavType.IntType })
@@ -205,7 +216,6 @@ class MainActivity : ComponentActivity() {
                                     QuizQuestionScreen(navController, quiz, index)
                                 }
                             }
-
                             // 이미 존재하던 해설 페이지
                             composable(
                                 route = "quiz_answer/{index}?userAnswer={userAnswer}",
@@ -234,7 +244,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // ✅ 여기로 이동 (MainActivity 안, onCreate 밖)
-    fun takePhoto() {
+    fun takePhoto(navController: NavHostController) {
         val capture = imageCapture ?: return
 
         capture.takePicture(
@@ -243,9 +253,14 @@ class MainActivity : ComponentActivity() {
                 override fun onCaptureSuccess(imageProxy: ImageProxy) {
                     val bitmap = imageProxyToBitmap(imageProxy)
                     imageProxy.close()
+                    // 클래스 목록 확인 (한 번만 보면 되니 로그 확인 후 지워도 됩니다)
 
                     val results = detector.detect(bitmap)
-
+                    if (results.isNotEmpty()) {
+                        latestGuideText = results[0].guide
+                        latestCapturedBitmap = bitmap
+                        navController.navigate("guide_result")
+                    }
                 }
                 override fun onError(exception: ImageCaptureException) {
                     Log.e("CameraX", "사진 캡처 실패", exception)
@@ -496,7 +511,7 @@ fun HomeScreen(navController: NavHostController) {
                     .height(80.dp)
                     .customShadow()
                     .clickable {
-                        // TODO: 최근 퀴즈 문제로 이동 (없으면 레벨1에 문제1)
+                        navController.navigate("quiz_question/0")
                     }
             ) {
                 Column(
@@ -704,7 +719,7 @@ fun HomeScreen(navController: NavHostController) {
 fun StudyQuizPage(navController: NavHostController) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
-
+    val context = LocalContext.current
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -750,7 +765,10 @@ fun StudyQuizPage(navController: NavHostController) {
                     .height(80.dp)
                     .customShadow()
                     .clickable {
-                        navController.navigate("matching_quiz")
+                        val sharedPref =
+                            context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
+                        val lastIndex = sharedPref.getInt("last_index", 0)
+                        navController.navigate("quiz_question/$lastIndex")
                     }
             ) {
                 Column(
@@ -874,10 +892,16 @@ fun StudyQuizPage(navController: NavHostController) {
                         val borderColor = if (isSelected) Color.Transparent else Color(0xFFB9DEE4)
                         val titleColor = if (isSelected) Color(0xFFC2EFF7) else Color(0xFF546A6E)
                         val subtitleColor = if (isSelected) Color(0xFF95D0DB) else Color(0xFF858494)
-
+                        val context = LocalContext.current
+                        val sharedPref = context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
                         Button(
                             onClick = {
-                                navController.navigate("quiz_question/0")
+                                val startIndex = if (number == "1") {
+                                    sharedPref.getInt("last_index", 0)
+                                } else {
+                                    0
+                                }
+                                navController.navigate("quiz_question/$startIndex")
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
                             shape = RoundedCornerShape(20.dp),
@@ -1081,161 +1105,6 @@ fun Modifier.customShadow(
 )
 
 
-
-@Composable//-->통합 해설페이지
-fun QuizAnswerScreen(
-    navController: NavHostController,
-    quiz: QuizItem,
-    index: Int,
-    userAnswer: String?
-) {
-    val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
-    val isCorrect = userAnswer?.trim()?.equals(quiz.correctAnswer.trim(), ignoreCase = true) == true
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF7AC5D3))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp)
-                .align(Alignment.BottomCenter)
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                .background(Color.White)
-                .height(800.dp)
-        ) {
-
-            // 상단바
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .align(Alignment.TopCenter),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(onClick = {
-                    navController.popBackStack()
-                }) {
-                    Icon(
-                        imageVector = Icons.Rounded.ArrowBackIosNew,
-                        modifier = Modifier.size(25.dp),
-                        tint = Color.Gray,
-                        contentDescription = "뒤로 가기",
-                    )
-                }
-
-                Text(
-                    text = "${index + 1} / 20",
-                    fontSize = 18.sp,
-                    color = Color.Black,
-                    fontFamily = pretendardsemibold
-                )
-
-                Text(
-                    text = "89 P",
-                    fontSize = 13.sp,
-                    color = Color.Gray,
-                    fontFamily = pretendardsemibold
-                )
-            }
-
-            // 문제 텍스트
-            Text(
-                text = quiz.question,
-                fontSize = 20.sp,
-                color = Color.Black,
-                fontFamily = pretendardsemibold,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(horizontal = 60.dp, vertical = 100.dp),
-                textAlign = TextAlign.Center
-            )
-
-            // 다음 문제 버튼
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        val nextIndex = index + 1
-                        if (nextIndex < chapter1FullQuizzes.size) {
-                            navController.navigate("quiz_question/$nextIndex")
-                        } else {
-                            navController.navigate("quiz") // 종료 후 메인
-                        }
-                    }
-                    .padding(top = 200.dp, end = 30.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
-            ) {
-                Text(
-                    text = "다음 문제",
-                    fontSize = 16.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color(0xFF585858)
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
-                    contentDescription = "다음 문제",
-                    modifier = Modifier.padding(start = 4.dp),
-                    tint = Color(0xFF585858)
-                )
-            }
-
-            // 해설 영역
-            Column(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(y = 70.dp)
-                    .fillMaxWidth(0.80f)
-                    .height(400.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFFF9F6F2))
-                    .padding(29.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = if (isCorrect) "정답!" else "오답!",
-                    fontSize = 22.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color.Black
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                Icon(
-                    imageVector = if (isCorrect) Icons.Outlined.CheckCircle else Icons.Default.Close,
-                    contentDescription = "결과 아이콘",
-                    tint = if (isCorrect) Color(0xFFE56A6A) else Color(0xFF4A75E1),
-                    modifier = Modifier.size(70.dp)
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text(
-                    text = quiz.explanation ?: "정답: ${quiz.correctAnswer}",
-                    fontSize = 20.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color.Black,
-                    textAlign = TextAlign.Center
-                )
-
-                if (!isCorrect && !userAnswer.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "당신의 답: $userAnswer",
-                        fontSize = 16.sp,
-                        fontFamily = pretendardsemibold,
-                        color = Color.Gray
-                    )
-                }
-            }
-        }
-    }
-}
-
 //@Preview(showBackground = true)
 @Composable//-->O/X 문제페이지
 fun QuizOXQuestionScreen(navController: NavHostController, quiz: QuizItem, index: Int) {
@@ -1243,7 +1112,13 @@ fun QuizOXQuestionScreen(navController: NavHostController, quiz: QuizItem, index
     val pretendardsemibold = FontFamily(
         Font(R.font.pretendardsemibold)
     )
-
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .putInt("last_index", index)
+            .apply()
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1270,13 +1145,13 @@ fun QuizOXQuestionScreen(navController: NavHostController, quiz: QuizItem, index
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = {
-                    navController.popBackStack()
+                    navController.navigate("quiz")
                 }) {
                     Icon(
                         imageVector = Icons.Rounded.ArrowBackIosNew,
                         modifier = Modifier.size(25.dp),
                         tint = Color.Gray,
-                        contentDescription = "뒤로 가기",
+                        contentDescription = "뒤로 가기"
                     )
                 }
 
@@ -1323,7 +1198,8 @@ fun QuizOXQuestionScreen(navController: NavHostController, quiz: QuizItem, index
                         .clip(RoundedCornerShape(topStart = 16.dp))
                         .background(Color(0xFFE56A6A))
                         .clickable {
-                            navController.navigate("quiz_answer/$index")
+                            val route = "quiz_answer/$index?userAnswer=O"
+                            navController.navigate(route)
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -1343,7 +1219,8 @@ fun QuizOXQuestionScreen(navController: NavHostController, quiz: QuizItem, index
                         .clip(RoundedCornerShape(topEnd = 16.dp))
                         .background(Color(0xFF6A93E5))
                         .clickable {
-                            navController.navigate("quiz_answer/$index")
+                            val route = "quiz_answer/$index?userAnswer=X" // 또는 "X"
+                            navController.navigate(route)
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -1365,7 +1242,13 @@ fun QuizSubjectiveQuestionScreen(navController: NavHostController, quiz: QuizIte
 
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     var answer by remember { mutableStateOf("") }
-
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .putInt("last_index", index)
+            .apply()
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1391,7 +1274,9 @@ fun QuizSubjectiveQuestionScreen(navController: NavHostController, quiz: QuizIte
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { navController.popBackStack() }) {
+                IconButton(onClick = {
+                    navController.navigate("quiz")
+                }) {
                     Icon(
                         imageVector = Icons.Rounded.ArrowBackIosNew,
                         modifier = Modifier.size(25.dp),
@@ -1498,7 +1383,14 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
 
     val questionDotCoords = remember { mutableMapOf<String, Offset>() }
     val answerDotCoords = remember { mutableMapOf<String, Offset>() }
-
+    val density = LocalDensity.current
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .putInt("last_index", index)
+            .apply()
+    }
     LaunchedEffect(matchedPairs.size) {
         if (matchedPairs.size == questions.size) {
             delay(1000)
@@ -1528,11 +1420,13 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = {
+                        navController.navigate("quiz")
+                    }) {
                         Icon(
                             imageVector = Icons.Rounded.ArrowBackIosNew,
-                            tint = Color.Gray,
                             modifier = Modifier.size(25.dp),
+                            tint = Color.Gray,
                             contentDescription = "뒤로 가기"
                         )
                     }
@@ -1564,14 +1458,15 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .weight(1f)
+                        .padding(horizontal = 10.dp, vertical = 50.dp)
+                        .height(700.dp)
                 ) {
                     // -------------왼쪽 질문-------------
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
+                        Spacer(modifier = Modifier.height(80.dp))
                         questions.forEach { question ->
                             val isSelected = selectedQuestion == question
                             val bgColor by animateColorAsState(
@@ -1581,8 +1476,8 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
 
                             Box(
                                 modifier = Modifier
-                                    .width(100.dp)
-                                    .padding(top = 30.dp, bottom = 4.dp)
+                                    .width(110.dp)
+                                    .padding(top = 8.dp, bottom = 8.dp)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(bgColor)
                                     .clickable { selectedQuestion = question }
@@ -1590,12 +1485,24 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .onGloballyPositioned { layoutCoordinates ->
+                                            val position = layoutCoordinates.positionInRoot()
+                                            val center = with(density) {
+                                                position + Offset(
+                                                    layoutCoordinates.size.width / 2f,
+                                                    layoutCoordinates.size.height / 2f
+                                                )
+                                            }
+                                            questionDotCoords[question] = center
+                                        })
+                                 {
                                     Text(
                                         text = question,
                                         fontSize = 16.sp,
                                         fontFamily = pretendardsemibold,
+                                        textAlign = TextAlign.Center,
                                         modifier = Modifier.weight(1f)
                                     )
 
@@ -1604,16 +1511,10 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
                                             .size(8.dp)
                                             .clip(CircleShape)
                                             .background(Color.DarkGray)
-                                            .onGloballyPositioned { layout ->
-                                                val position = layout.positionInRoot()
-                                                val center = position + Offset(
-                                                    layout.size.width / 2f,
-                                                    layout.size.height / 2f
-                                                )
-                                                questionDotCoords[question] = center
-                                            }
 
-                                    )
+                                    )}
+
+
                                 }
                             }
                         }
@@ -1627,12 +1528,13 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                         horizontalAlignment = Alignment.End
                     ) {
+                        Spacer(modifier = Modifier.height(10.dp))
                         answers.forEach { answer ->
                             Box(
                                 modifier = Modifier
                                     .width(140.dp)
                                     .width(150.dp)
-                                    .padding(top = 15.dp, bottom = 4.dp)
+                                    .padding(top = 10.dp, bottom = 4.dp)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(Color(0xFFF1F8E9))
                                     .clickable {
@@ -1643,7 +1545,7 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
                                             selectedQuestion = null
                                         }
                                     }
-                                    .padding(12.dp),
+                                    .padding(8.dp),
                                 contentAlignment = Alignment.CenterEnd
                             ) {
                                 Row(
@@ -1651,22 +1553,24 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(8.dp)
+                                            .size(5.dp)
                                             .clip(CircleShape)
                                             .background(Color.DarkGray)
-                                            .onGloballyPositioned { layout ->
-                                                val position = layout.positionInRoot()
-                                                val center = position + Offset(
-                                                    layout.size.width / 2f,
-                                                    layout.size.height / 2f
-                                                )
+                                            .onGloballyPositioned { layoutCoordinates ->
+                                                val position = layoutCoordinates.positionInRoot()
+                                                val center = with(density) {
+                                                    position + Offset(
+                                                        layoutCoordinates.size.width / 2f,
+                                                        layoutCoordinates.size.height / 2f
+                                                    )
+                                                }
                                                 answerDotCoords[answer] = center
-                                            }
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                            })
+
+                                    Spacer(modifier = Modifier.width(7.dp))
                                     Text(
                                         text = answer,
-                                        fontSize = 14.sp,
+                                        fontSize = 16.sp,
                                         fontFamily = pretendardsemibold
                                     )
                                 }
@@ -1696,13 +1600,19 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
             }
         }
     }
-}
+
 
 //@Preview(showBackground = true)
 @Composable//-->4지선다 문제페이지
 fun QuizMultipleChoiceQuestionScreen(navController: NavHostController, quiz: QuizItem, index: Int) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
-
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .putInt("last_index", index)
+            .apply()
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1726,7 +1636,9 @@ fun QuizMultipleChoiceQuestionScreen(navController: NavHostController, quiz: Qui
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { navController.popBackStack() }) {
+                IconButton(onClick = {
+                    navController.navigate("quiz")
+                }) {
                     Icon(
                         imageVector = Icons.Rounded.ArrowBackIosNew,
                         modifier = Modifier.size(25.dp),
@@ -1816,9 +1728,10 @@ fun QuizMultipleChoiceQuestionScreen(navController: NavHostController, quiz: Qui
                                         .fillMaxHeight()
                                         .background(color)
                                         .clickable {
-                                            navController.navigate(
-                                                "answer?quizId=${quiz.id}&userAnswer=$label&index=$index"
-                                            )
+                                            val label =
+                                                ('A' + globalIndex).toString() // 이미 위에서 정의되어 있음
+                                            val route = "quiz_answer/$index?userAnswer=$label"
+                                            navController.navigate(route)
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -1838,421 +1751,6 @@ fun QuizMultipleChoiceQuestionScreen(navController: NavHostController, quiz: Qui
     }
 }
 
-
-
-//------------여기는 안쓸건데 ui구성 참고를 위해 일단은 남겨둠----------------
-//@Preview(showBackground = true)
-@Composable//-->퀴즈1 해설페이지
-fun Quiz1AnswerScreen(navController: NavHostController) {
-
-    val pretendardsemibold = FontFamily(
-        Font(R.font.pretendardsemibold)
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF7AC5D3)) // 배경색
-    ) {
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp)
-                .align(Alignment.BottomCenter)
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                .background(Color.White)
-                .height(800.dp)
-        ) {
-
-            // 상단: 뒤로가기, 문제 수, 점수
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .align(Alignment.TopCenter),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(onClick = { /* TODO: 뒤로가기 */ }) {
-                    Icon(
-                        imageVector = Icons.Rounded.ArrowBackIosNew,
-                        modifier = Modifier.size(25.dp),
-                        tint = Color.Gray,
-                        contentDescription = "뒤로 가기",
-                    )
-                }
-
-                Text(
-                    text = "1 / 100",
-                    fontSize = 18.sp,
-                    color = Color.Black,
-                    fontFamily = pretendardsemibold
-                )
-
-                Text(
-                    text = "89 P",
-                    fontSize = 13.sp,
-                    color = Color.Gray,
-                    fontFamily = pretendardsemibold
-                )
-            }
-
-            // 문제 텍스트
-            Text(
-                text = "종이팩은 일반 종이류와 함께 배출한다.",
-                fontSize = 20.sp,
-                color = Color.Black,
-                fontFamily = pretendardsemibold,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(horizontal = 60.dp, vertical = 100.dp),
-                textAlign = TextAlign.Center
-            )
-
-            // 다음 문제 버튼 + 아이콘
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        navController.navigate("quiz2")
-                    }
-                    .padding(top = 200.dp, end = 30.dp), // 기존 위치 유지
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
-            ) {
-                Text(
-                    text = "다음 문제",
-                    fontSize = 16.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color(0xFF585858)
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
-                    contentDescription = "다음 문제",
-                    modifier = Modifier.padding(start = 4.dp),
-                    tint = Color(0xFF585858)
-                )
-            }
-
-            // 라운드 박스 (오답)
-            Column(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(y = 70.dp)
-                    .fillMaxWidth(0.80f) // 전체 화면의 85% 너비
-                    .height(400.dp) // 높이 지정
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFFF9F6F2))
-                    .padding(29.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "오답!",
-                    fontSize = 22.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color.Black
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "오답 아이콘",
-                    tint = Color(0xFF4A75E1),
-                    modifier = Modifier.size(70.dp)
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text(
-                    text = "종이팩은 종이류가 아닌, 전용\n수거함에 배출해야 합니다.",
-                    fontSize = 20.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color.Black,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
-
-//@Preview(showBackground = true)
-@Composable//-->주관식 해설페이지
-fun Quiz2AnswerScreen(navController: NavHostController) {
-
-    val pretendardsemibold = FontFamily(
-        Font(R.font.pretendardsemibold)
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF7AC5D3)) // 배경색
-    ) {
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp)
-                .align(Alignment.BottomCenter)
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                .background(Color.White)
-                .height(800.dp)
-        ) {
-
-            // 상단: 뒤로가기, 문제 수, 점수
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .align(Alignment.TopCenter),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(onClick = { /* TODO: 뒤로가기 */ }) {
-                    Icon(
-                        imageVector = Icons.Rounded.ArrowBackIosNew,
-                        modifier = Modifier.size(25.dp),
-                        tint = Color.Gray,
-                        contentDescription = "뒤로 가기",
-                    )
-                }
-
-                Text(
-                    text = "1 / 100",
-                    fontSize = 18.sp,
-                    color = Color.Black,
-                    fontFamily = pretendardsemibold
-                )
-
-                Text(
-                    text = "89 P",
-                    fontSize = 13.sp,
-                    color = Color.Gray,
-                    fontFamily = pretendardsemibold
-                )
-            }
-
-            // 문제 텍스트
-            Text(
-                text = "바나나 껍질은 음식물쓰레기이다.",
-                fontSize = 20.sp,
-                color = Color.Black,
-                fontFamily = pretendardsemibold,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(horizontal = 60.dp, vertical = 100.dp),
-                textAlign = TextAlign.Center
-            )
-
-            // 다음 문제 버튼 + 아이콘
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        navController.navigate("quiz4")
-                    }
-                    .padding(top = 200.dp, end = 30.dp), // 기존 위치 유지
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
-            ) {
-                Text(
-                    text = "다음 문제",
-                    fontSize = 16.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color(0xFF585858)
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
-                    contentDescription = "다음 문제",
-                    modifier = Modifier.padding(start = 4.dp),
-                    tint = Color(0xFF585858)
-                )
-            }
-
-            // 라운드 박스 (오답)
-            Column(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(y = 70.dp)
-                    .fillMaxWidth(0.80f) // 전체 화면의 85% 너비
-                    .height(400.dp) // 높이 지정
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFFF9F6F2))
-                    .padding(29.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "오답!",
-                    fontSize = 22.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color.Black
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "오답 아이콘",
-                    tint = Color(0xFF4A75E1),
-                    modifier = Modifier.size(70.dp)
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text(
-                    text = "바나나 껍질은 일반쓰레기가\n아닌 음식물 쓰레기에\n배출해야 합니다.",
-                    fontSize = 20.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color.Black,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
-
-@Composable//-->퀴즈4 해설페이지
-fun Quiz4AnswerScreen(navController: NavHostController) {
-
-    val pretendardsemibold = FontFamily(
-        Font(R.font.pretendardsemibold)
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF7AC5D3)) // 배경색
-    ) {
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp)
-                .align(Alignment.BottomCenter)
-                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                .background(Color.White)
-                .height(800.dp)
-        ) {
-
-            // 상단: 뒤로가기, 문제 수, 점수
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .align(Alignment.TopCenter),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(onClick = {
-                    navController.navigate("quiz") {
-                        popUpTo("quiz") { inclusive = true } // 이미 백스택에 있으면 중복 방지
-                    }
-                }) {
-                    Icon(
-                        imageVector = Icons.Rounded.ArrowBackIosNew,
-                        modifier = Modifier.size(25.dp),
-                        tint = Color.Gray,
-                        contentDescription = "뒤로 가기",
-                    )
-                }
-
-                Text(
-                    text = "1 / 100",
-                    fontSize = 18.sp,
-                    color = Color.Black,
-                    fontFamily = pretendardsemibold
-                )
-
-                Text(
-                    text = "89 P",
-                    fontSize = 13.sp,
-                    color = Color.Gray,
-                    fontFamily = pretendardsemibold
-                )
-            }
-
-            // 문제 텍스트
-            Text(
-                text = "B",
-                fontSize = 25.sp,
-                color = Color.Black,
-                fontFamily = pretendardsemibold,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(horizontal = 60.dp, vertical = 100.dp),
-                textAlign = TextAlign.Center
-            )
-
-            // 다음 문제 버튼 + 아이콘
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        navController.navigate("quiz4")
-                    }
-                    .padding(top = 200.dp, end = 30.dp), // 기존 위치 유지
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
-            ) {
-                Text(
-                    text = "다음 문제",
-                    fontSize = 16.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color(0xFF585858)
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
-                    contentDescription = "다음 문제",
-                    modifier = Modifier.padding(start = 4.dp),
-                    tint = Color(0xFF585858)
-                )
-            }
-
-            // 라운드 박스 (오답)
-            Column(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(y = 70.dp)
-                    .fillMaxWidth(0.80f) // 전체 화면의 85% 너비
-                    .height(400.dp) // 높이 지정
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFFF9F6F2))
-                    .padding(29.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "정답!",
-                    fontSize = 22.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color.Black
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                Icon(
-                    imageVector = Icons.Outlined.CheckCircle,
-                    contentDescription = "정답 아이콘",
-                    tint = Color(0xFFE56A6A),
-                    modifier = Modifier.size(70.dp)
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text(
-                    text = "음식물이 묻은 종이컵은\n일반 쓰레기입니다.",
-                    fontSize = 20.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color.Black,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
-//---------------------------------------------------------------------
-
 @Composable
 fun CameraScreenContent(
     navController: NavHostController,
@@ -2266,6 +1764,7 @@ fun CameraScreenContent(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
+
         ) {
             Row(
                 modifier = Modifier
@@ -2296,7 +1795,7 @@ fun CameraScreenContent(
                         .background(Color.DarkGray),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    listOf("폐기물 분리", "분리배출 표시").forEach { tab ->
+                    listOf("폐기물 분류", "분리배출 표시").forEach { tab ->
                         Text(
                             text = tab,
                             fontFamily = pretendardbold,
@@ -2317,7 +1816,7 @@ fun CameraScreenContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(550.dp) // ✅ 원하는 높이 지정
+                    .height(400.dp) // ✅ 높이 줄임
                     .padding(horizontal = 16.dp)
             ) {
                 CameraPreviewView(
@@ -2327,32 +1826,33 @@ fun CameraScreenContent(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp)) // ✅ 위아래 여백 줄임
 
-            // 📸 하단 촬영 버튼
+// 📸 하단 촬영 버튼
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 15.dp),
+                    .navigationBarsPadding()
+                    .padding(bottom = 0.dp), // ✅ 아래 여백 제거로 위로 올림
                 contentAlignment = Alignment.Center
             ) {
-                IconButton (
-                onClick = onCaptureClick,
-                modifier = Modifier.size(90.dp))// 버튼 크기
-                    {
+                IconButton(
+                    onClick = onCaptureClick,
+                    modifier = Modifier
+                        .zIndex(1f)
+                        .size(80.dp) // 약간 줄여도 좋음
+                ) {
                     Icon(
                         imageVector = Icons.Default.Circle,
                         contentDescription = "촬영",
-                        modifier = Modifier.size(75.dp),
+                        modifier = Modifier.size(65.dp), // 아이콘 크기도 비율 맞춰 조정 가능
                         tint = Color.White
                     )
                 }
-            }
-        }
-    }
-}
+            }}}}
 
-//@Preview(showBackground = true)
+
+            //@Preview(showBackground = true)
 @Composable//-->카메라페이지
 fun CameraScreenPreview(navController: NavHostController, mainActivity: MainActivity) {
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
@@ -2363,7 +1863,7 @@ fun CameraScreenPreview(navController: NavHostController, mainActivity: MainActi
             navController = navController,
             selectedTab = selectedTab,
             onTabChange = { selectedTab = it },
-            onCaptureClick = {mainActivity.takePhoto()},
+            onCaptureClick = {mainActivity.takePhoto(navController)},
             pretendardbold = pretendardbold
         )
     } else {
@@ -2468,113 +1968,6 @@ fun RequestCameraPermission(content: @Composable () -> Unit) {
     }
 }
 
-
-//@Preview(showBackground = true)
-@Composable
-fun GuideResultScreen(navController: NavHostController) {
-
-    val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
-
-    Scaffold(
-
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(Color(0xFF7AC5D3))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .padding(
-                        top = 40.dp, // ✅ 상단 여백 명시
-                        start = 16.dp,
-                        end = 16.dp
-                    )
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                    .background(Color.White)
-                    .height(800.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(30.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // 🔹 상단 바
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { /* TODO 뒤로가기 */ }) {
-                            Icon(
-                                imageVector = Icons.Rounded.ArrowBackIosNew,
-                                modifier = Modifier.size(25.dp),
-                                tint = Color.Gray,
-                                contentDescription = "뒤로 가기"
-                            )
-                        }
-
-                        Text(
-                            text = "분리배출 도우미",
-                            fontSize = 18.sp,
-                            color = Color.Black,
-                            fontFamily = pretendardsemibold
-                        )
-
-                        IconButton(onClick = { /* TODO 닫기 */ }) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                modifier = Modifier.size(28.dp),
-                                tint = Color.Gray,
-                                contentDescription = "닫기"
-                            )
-                        }
-                    }
-
-                    // 🔹 이미지 박스 (중앙 위치)
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.Gray)
-                            .fillMaxWidth(0.8f)
-                            .aspectRatio(1f)
-                    ) {
-                        // TODO: 실제 이미지로 교체
-                        Image(
-                            painter = ColorPainter(Color.LightGray),
-                            contentDescription = "촬영 이미지",
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    // 🔹 문제 텍스트
-                    Text(
-                        text = "내용물을 비우고 이물질을 제거하여\n 비닐류에 배출해주세요!",
-                        fontSize = 20.sp,
-                        color = Color.Black,
-                        fontFamily = pretendardsemibold,
-                        textAlign = TextAlign.Center
-                    )
-
-                    // 🔹 점수 추가 텍스트
-                    Text(
-                        text = "+ 10 P",
-                        fontSize = 16.sp,
-                        color = Color.Gray,
-                        fontFamily = pretendardsemibold,
-                        textAlign = TextAlign.Center
-                    )
-                    }
-                }
-            }
-        }
-    }
 
 //@Preview(showBackground = true)
 @Composable
@@ -2855,7 +2248,7 @@ fun LeaderboardList() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFE0F7FA),shape = RoundedCornerShape(24.dp)) // 하늘색 배경 전체로 적용
+            .background(Color(0xFFE0F7FA), shape = RoundedCornerShape(24.dp)) // 하늘색 배경 전체로 적용
             .padding(horizontal = 16.dp, vertical = 15.dp)
     ) {
         LazyColumn(
@@ -2894,7 +2287,7 @@ fun Mypage(navController: NavHostController){
                 contentDescription = "Settings",
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 50.dp, end=20.dp)
+                    .padding(top = 50.dp, end = 20.dp)
                     .size(28.dp),
                 tint = Color.Gray
             )
