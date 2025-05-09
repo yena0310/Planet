@@ -2034,7 +2034,10 @@ fun RequestCameraPermission(content: @Composable () -> Unit) {
 @Composable
 fun GuideResultScreen(navController: NavHostController) {
     val context = LocalContext.current
-    val testBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test16)
+    val options = BitmapFactory.Options().apply {
+        inSampleSize = 4  // 원본보다 1/4 크기로 줄이기
+    }
+    val testBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test16, options)
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
 
     Scaffold(
