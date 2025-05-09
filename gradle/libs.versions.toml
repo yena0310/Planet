@@ -12,6 +12,7 @@ constraintlayout = "2.2.1"
 room = "2.6.1"
 ksp = "2.1.20-2.0.1"
 firebaseDatabase = "21.0.0"
+firebaseCrashlyticsBuildtools = "3.0.3"
 
 
 [libraries]
@@ -40,6 +41,7 @@ androidx-compose-ui-tooling-preview = "androidx.compose.ui:ui-tooling-preview:${
 androidx-compose-ui-tooling = "androidx.compose.ui:ui-tooling:${versions.compose}"
 androidx-compose-ui-test-manifest = "androidx.compose.ui:ui-test-manifest:${versions.compose}"
 firebase-database = { group = "com.google.firebase", name = "firebase-database", version.ref = "firebaseDatabase" }
+firebase-crashlytics-buildtools = { group = "com.google.firebase", name = "firebase-crashlytics-buildtools", version.ref = "firebaseCrashlyticsBuildtools" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

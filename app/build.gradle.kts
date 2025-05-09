@@ -60,6 +60,7 @@ dependencies {
 
     // Compose BOM (버전 정합성 보장)
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.firebase.crashlytics.buildtools)
     androidTestImplementation(platform(libs.androidx.compose.bom))
 
     // Compose UI
@@ -109,6 +110,9 @@ dependencies {
     // https://firebase.google.com/docs/android/setup#available-libraries
 
     implementation("org.tensorflow:tensorflow-lite:2.13.0")
-
     implementation("com.google.guava:guava:32.1.2-android")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.10.0")
+
 }

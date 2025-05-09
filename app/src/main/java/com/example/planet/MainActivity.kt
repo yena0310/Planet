@@ -1,5 +1,7 @@
 package com.example.planet
 
+import com.example.planet.guide.LabelDetector
+
 // Android 기본
 import android.annotation.SuppressLint
 import android.content.Context
@@ -25,7 +27,6 @@ import androidx.compose.ui.geometry.*
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -59,7 +60,6 @@ import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.LifecycleOwner
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.CheckCircle
 
 // 기타
@@ -69,47 +69,36 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageCapture.OutputFileOptions
-import androidx.camera.core.Camera
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.core.content.ContextCompat
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-
-import androidx.activity.compose.setContent
 import androidx.camera.core.*
-import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.*
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.navigation.compose.*
 import java.nio.ByteBuffer
 
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.layout.positionInWindow
 
 
 class MainActivity : ComponentActivity() {
@@ -117,11 +106,13 @@ class MainActivity : ComponentActivity() {
     public lateinit var imageCapture: ImageCapture
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var detector: Yolov8sDetector
+    private lateinit var labelDetector: LabelDetector
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        detector = Yolov8sDetector(this) // YOLO 모델 로드
+        detector = Yolov8sDetector(this) // "폐기물 분리"
+        labelDetector = LabelDetector(this) // "분리배출 표시"
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         setContent {
@@ -132,8 +123,6 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 delay(2000)
                 showSplash = false
-
-                val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test_image)
 
                 try {
                     val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test_image)
@@ -167,7 +156,7 @@ class MainActivity : ComponentActivity() {
                     ) { innerPadding ->
                         NavHost(
                             navController = navController,
-                            startDestination = "login",
+                            startDestination = "home",
                             modifier = Modifier.padding(innerPadding)
                         ) {
                             composable("login") { LoginScreen(navController) }
@@ -175,18 +164,9 @@ class MainActivity : ComponentActivity() {
                             composable("quiz") { StudyQuizPage(navController) }
                             composable("rank") { LeaderboardScreen(navController) }
                             composable("mypage") { Mypage(navController) }
-                            composable("camera") {
-                                CameraScreenContent(
-                                    navController = navController,
-                                    selectedTab = "폐기물 분리",
-                                    onTabChange = { /* 탭 변경 로직 */ },
-                                    onCaptureClick = { takePhoto() },
-                                    pretendardbold = FontFamily.Default
-                                )
-                            }
-
+                            composable("camera") { CameraScreenPreview(navController, this@MainActivity) }
+                            composable("guide") { GuideResultScreen(navController) }
                             composable("study_quiz") { StudyQuizPage(navController) }
-                            // 매칭 퀴즈 경로 등록
                             composable("matching_quiz") {
                                 QuizMatchingQuestionScreen(
                                     navController = navController,
@@ -194,7 +174,6 @@ class MainActivity : ComponentActivity() {
                                     index = 10 // 11번째 문제라면 10
                                 )
                             }
-
                             composable(
                                 route = "quiz_question/{index}",
                                 arguments = listOf(navArgument("index") { type = NavType.IntType })
@@ -205,8 +184,6 @@ class MainActivity : ComponentActivity() {
                                     QuizQuestionScreen(navController, quiz, index)
                                 }
                             }
-
-                            // 이미 존재하던 해설 페이지
                             composable(
                                 route = "quiz_answer/{index}?userAnswer={userAnswer}",
                                 arguments = listOf(
@@ -227,13 +204,11 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-
                 }
             }
         }
     }
 
-    // ✅ 여기로 이동 (MainActivity 안, onCreate 밖)
     fun takePhoto() {
         val capture = imageCapture ?: return
 
@@ -245,10 +220,9 @@ class MainActivity : ComponentActivity() {
                     imageProxy.close()
 
                     val results = detector.detect(bitmap)
-
                 }
                 override fun onError(exception: ImageCaptureException) {
-                    Log.e("CameraX", "사진 캡처 실패", exception)
+                    Log.e("Camera", "촬영 실패", exception)
                 }
             }
         )
@@ -259,6 +233,34 @@ class MainActivity : ComponentActivity() {
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
         return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    }
+
+    fun takeLabelPhoto(navController: NavHostController) {
+        val capture = imageCapture ?: return
+
+        capture.takePicture(
+            ContextCompat.getMainExecutor(this),
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onCaptureSuccess(imageProxy: ImageProxy) {
+                    val bitmap = imageProxyToBitmap(imageProxy)
+                    imageProxy.close()
+
+                    labelDetector.process(
+                        bitmap,
+                        onResult = { guideText ->
+                            navController.navigate("guide_result/${Uri.encode(guideText)}")
+                        },
+                        onError = { error ->
+                            Log.e("LabelDetector", "오류: $error")
+                        }
+                    )
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    Log.e("Camera", "촬영 실패", exception)
+                }
+            }
+        )
     }
 }
 
@@ -271,8 +273,6 @@ fun QuizQuestionScreen(navController: NavHostController, quiz: QuizItem, index: 
         QuizType.MULTIPLE_CHOICE -> QuizMultipleChoiceQuestionScreen(navController, quiz, index)
     }
 }
-
-
 
 @Composable
 fun getCurrentRoute(navController: NavHostController): String {
@@ -298,7 +298,6 @@ fun SplashScreen() {
         )
     }
 }
-
 
 @Composable
 fun LoginScreen(navController: NavHostController) {
@@ -440,7 +439,6 @@ fun LoginScreen(navController: NavHostController) {
         }
     }
 }
-
 
 //@Preview(showBackground = true)
 @Composable
@@ -644,7 +642,7 @@ fun HomeScreen(navController: NavHostController) {
                             horizontalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             Button(
-                                onClick = { /* TODO: 폐기물 분류 클릭 이벤트 */ },
+                                onClick = { navController.navigate("camera") },
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE4FBFF))
                             ) {
@@ -668,7 +666,7 @@ fun HomeScreen(navController: NavHostController) {
                             }
 
                             Button(
-                                onClick = { /* TODO: 분리배출 표시 클릭 이벤트 */ },
+                                onClick = { navController.navigate("camera") },
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE4FBFF))
                             ) {
@@ -696,7 +694,6 @@ fun HomeScreen(navController: NavHostController) {
             }
         }
     }
-
 
 //@Preview(showBackground = true)
 @SuppressLint("SuspiciousIndentation")
@@ -944,8 +941,6 @@ fun StudyQuizPage(navController: NavHostController) {
                         Spacer(modifier = Modifier.height(16.dp))
                     }}}}}
 
-
-
 @Composable//-->하단 네비게이션바
 fun BottomNavigationBar(
     modifier: Modifier = Modifier,
@@ -1079,8 +1074,6 @@ fun Modifier.customShadow(
         }
     }
 )
-
-
 
 @Composable//-->통합 해설페이지
 fun QuizAnswerScreen(
@@ -2275,8 +2268,8 @@ fun CameraScreenContent(
             ) {
                 // 🔙 뒤로가기 버튼 (왼쪽)
                 IconButton(onClick = {
-                    navController.navigate("quiz") {
-                        popUpTo("quiz") { inclusive = true }
+                    navController.navigate("home") {
+                        popUpTo("home") { inclusive = false }
                     }
                 }) {
                     Icon(
@@ -2363,7 +2356,14 @@ fun CameraScreenPreview(navController: NavHostController, mainActivity: MainActi
             navController = navController,
             selectedTab = selectedTab,
             onTabChange = { selectedTab = it },
-            onCaptureClick = {mainActivity.takePhoto()},
+            onCaptureClick = {
+                if (selectedTab == "폐기물 분리") {
+                    mainActivity.takePhoto()
+                } else {
+                    mainActivity.takeLabelPhoto(navController)
+                    navController.navigate("guide")
+                }
+            },
             pretendardbold = pretendardbold
         )
     } else {
@@ -2397,14 +2397,11 @@ fun CameraPreviewView(
 
         LaunchedEffect(Unit) {
             val cameraProvider = cameraProviderFuture.get()
-            // ✅ Preview Builder (고쳤음)
             val preview = CameraXPreview.Builder().build()
             preview.setSurfaceProvider(previewView.surfaceProvider)
-            // ⬇️ 추가된 부분 (imageCapture 생성)
             val imageCapture = ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 .build()
-            // ⬆️ 추가된 부분
 
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
@@ -2468,12 +2465,12 @@ fun RequestCameraPermission(content: @Composable () -> Unit) {
     }
 }
 
-
 //@Preview(showBackground = true)
 @Composable
 fun GuideResultScreen(navController: NavHostController) {
 
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
+    val guideText = Uri.decode(navController.currentBackStackEntry?.arguments?.getString("guideText") ?: "분리배출 표시를 인식하지 못했습니다.\n다시 촬영해주세요 :(")
 
     Scaffold(
 
@@ -2489,7 +2486,7 @@ fun GuideResultScreen(navController: NavHostController) {
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .padding(
-                        top = 40.dp, // ✅ 상단 여백 명시
+                        top = 40.dp,
                         start = 16.dp,
                         end = 16.dp
                     )
@@ -2511,7 +2508,7 @@ fun GuideResultScreen(navController: NavHostController) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { /* TODO 뒤로가기 */ }) {
+                        IconButton(onClick = { navController.navigate("camera") }) {
                             Icon(
                                 imageVector = Icons.Rounded.ArrowBackIosNew,
                                 modifier = Modifier.size(25.dp),
@@ -2527,7 +2524,7 @@ fun GuideResultScreen(navController: NavHostController) {
                             fontFamily = pretendardsemibold
                         )
 
-                        IconButton(onClick = { /* TODO 닫기 */ }) {
+                        IconButton(onClick = { navController.navigate("home") }) {
                             Icon(
                                 imageVector = Icons.Rounded.Close,
                                 modifier = Modifier.size(28.dp),
@@ -2545,7 +2542,6 @@ fun GuideResultScreen(navController: NavHostController) {
                             .fillMaxWidth(0.8f)
                             .aspectRatio(1f)
                     ) {
-                        // TODO: 실제 이미지로 교체
                         Image(
                             painter = ColorPainter(Color.LightGray),
                             contentDescription = "촬영 이미지",
@@ -2553,20 +2549,10 @@ fun GuideResultScreen(navController: NavHostController) {
                         )
                     }
 
-                    // 🔹 문제 텍스트
                     Text(
-                        text = "내용물을 비우고 이물질을 제거하여\n 비닐류에 배출해주세요!",
+                        text = guideText,
                         fontSize = 20.sp,
                         color = Color.Black,
-                        fontFamily = pretendardsemibold,
-                        textAlign = TextAlign.Center
-                    )
-
-                    // 🔹 점수 추가 텍스트
-                    Text(
-                        text = "+ 10 P",
-                        fontSize = 16.sp,
-                        color = Color.Gray,
                         fontFamily = pretendardsemibold,
                         textAlign = TextAlign.Center
                     )
@@ -2733,8 +2719,6 @@ fun LeaderboardScreen(navController: NavHostController) {
         }
     }
 
-
-
 @Composable
 fun PodiumItem(name: String, score: Int, rank: Int, modifier: Modifier = Modifier) {
     val avatarColor = when (rank) {
@@ -2787,7 +2771,6 @@ fun PodiumItem(name: String, score: Int, rank: Int, modifier: Modifier = Modifie
         }
     }
 }
-
 
 @Composable
 fun LeaderboardRow(rank: Int, name: String, score: Int, color: Color, isMe: Boolean = false) {

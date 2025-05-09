@@ -92,9 +92,6 @@ class Yolov8sDetector(context: Context) {
         return bestResult?.let { listOf(it) } ?: emptyList()
     }
 
-
-
-
     data class DetectionResult(
         val boundingBox: RectF,
         val confidence: Float,
