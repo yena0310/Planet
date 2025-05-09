@@ -1,68 +1,182 @@
 package com.example.planet
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.rounded.ArrowBackIosNew
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 
-@Composable
-fun QuizQuestionScreen(navController: NavHostController, index: Int) {
-    val quiz = chapter1FullQuizzes.getOrNull(index) ?: return
+@Composable//-->통합 해설페이지
+fun QuizAnswerScreen(
+    navController: NavHostController,
+    quiz: QuizItem,
+    index: Int,
+    userAnswer: String?
+) {
+    val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
+    val isCorrect = userAnswer?.trim()?.equals(quiz.correctAnswer.trim(), ignoreCase = true) == true
 
-    when (quiz.type) {
-        QuizType.OX -> QuizOXQuestionScreen(navController, quiz, index)
-        QuizType.SUBJECTIVE -> QuizSubjectiveQuestionScreen(navController, quiz, index)
-        QuizType.MATCHING -> QuizMatchingQuestionScreen(navController, quiz, index)
-        QuizType.MULTIPLE_CHOICE -> QuizMultipleChoiceQuestionScreen(navController, quiz, index)
-    }
-}
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF7AC5D3))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp)
+                .align(Alignment.BottomCenter)
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                .background(Color.White)
+                .height(800.dp)
+        ) {
 
-@Composable
-fun QuizAnswerScreen(navController: NavHostController, index: Int) {
-    val quiz = chapter1FullQuizzes.getOrNull(index) ?: return
+            // 상단바
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .align(Alignment.TopCenter),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = {
+                    navController.navigate("quiz") {
+                        popUpTo("quiz") { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }) {
+                    Icon(
+                        imageVector = Icons.Rounded.ArrowBackIosNew,
+                        modifier = Modifier.size(25.dp),
+                        tint = Color.Gray,
+                        contentDescription = "뒤로 가기"
+                    )
+                }
 
-    QuizAnswerContent(quiz = quiz, onNext = {
-        val nextIndex = index + 1
-        if (nextIndex < chapter1FullQuizzes.size) {
-            navController.navigate("quiz_question/$nextIndex") {
-                popUpTo("quiz_question/$index") { inclusive = true }
+                Text(
+                    text = "${index + 1} / 20",
+                    fontSize = 18.sp,
+                    color = Color.Black,
+                    fontFamily = pretendardsemibold
+                )
+
+                Text(
+                    text = "89 P",
+                    fontSize = 13.sp,
+                    color = Color.Gray,
+                    fontFamily = pretendardsemibold
+                )
             }
-        } else {
-            navController.navigate("quiz") {
-                popUpTo("quiz_question/$index") { inclusive = true }
+
+            // 문제 텍스트
+            Text(
+                text = quiz.question,
+                fontSize = 20.sp,
+                color = Color.Black,
+                fontFamily = pretendardsemibold,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 60.dp, vertical = 100.dp),
+                textAlign = TextAlign.Center
+            )
+
+            // 다음 문제 버튼
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        val nextIndex = index + 1
+                        if (nextIndex < chapter1FullQuizzes.size) {
+                            navController.navigate("quiz_question/$nextIndex")
+                        } else {
+                            navController.navigate("quiz") // 종료 후 메인
+                        }
+                    }
+                    .padding(top = 200.dp, end = 30.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
+            ) {
+                Text(
+                    text = "다음 문제",
+                    fontSize = 16.sp,
+                    fontFamily = pretendardsemibold,
+                    color = Color(0xFF585858)
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
+                    contentDescription = "다음 문제",
+                    modifier = Modifier.padding(start = 4.dp),
+                    tint = Color(0xFF585858)
+                )
+            }
+
+            // 해설 영역
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(y = 70.dp)
+                    .fillMaxWidth(0.80f)
+                    .height(400.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xFFF9F6F2))
+                    .padding(29.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = if (isCorrect) "정답!" else "오답!",
+                    fontSize = 22.sp,
+                    fontFamily = pretendardsemibold,
+                    color = Color.Black
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Icon(
+                    imageVector = if (isCorrect) Icons.Outlined.CheckCircle else Icons.Default.Close,
+                    contentDescription = "결과 아이콘",
+                    tint = if (isCorrect) Color(0xFFE56A6A) else Color(0xFF4A75E1),
+                    modifier = Modifier.size(70.dp)
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = quiz.explanation ?: "정답: ${quiz.correctAnswer}",
+                    fontSize = 20.sp,
+                    fontFamily = pretendardsemibold,
+                    color = Color.Black,
+                    textAlign = TextAlign.Center
+                )
+
+                if (!isCorrect && !userAnswer.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "당신의 답: $userAnswer",
+                        fontSize = 16.sp,
+                        fontFamily = pretendardsemibold,
+                        color = Color.Gray
+                    )
+                }
             }
         }
-    })
-}
-
-@Composable
-fun QuizAnswerContent(quiz: QuizItem, onNext: () -> Unit) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(
-            text = "해설",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        Text(
-            text = quiz.explanation ?: "정답 해설이 없습니다.",
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
-        Row(modifier = Modifier
-            .clickable { onNext() }
-            .padding(top = 16.dp)) {
-            Text("다음 문제", style = MaterialTheme.typography.bodyLarge)
-            Icon(imageVector = Icons.Default.ArrowForward, contentDescription = "Next")
-        }
     }
 }
-
