@@ -90,7 +90,7 @@ fun QuizAnswerScreen(
             // 문제 텍스트
             Text(
                 text = quiz.question,
-                fontSize = 20.sp,
+                fontSize = 16.sp,
                 color = Color.Black,
                 fontFamily = pretendardsemibold,
                 modifier = Modifier
@@ -102,22 +102,21 @@ fun QuizAnswerScreen(
             // 다음 문제 버튼
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .align(Alignment.TopEnd) // 오른쪽 상단에 고정
+                    .padding(top = 200.dp, end = 30.dp) // 🔽 위치 조정
                     .clickable {
                         val nextIndex = index + 1
                         if (nextIndex < chapter1FullQuizzes.size) {
                             navController.navigate("quiz_question/$nextIndex")
                         } else {
-                            navController.navigate("quiz") // 종료 후 메인
+                            navController.navigate("quiz")
                         }
-                    }
-                    .padding(top = 200.dp, end = 30.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
+                    },
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "다음 문제",
-                    fontSize = 16.sp,
+                    fontSize = 12.sp,
                     fontFamily = pretendardsemibold,
                     color = Color(0xFF585858)
                 )
@@ -128,14 +127,14 @@ fun QuizAnswerScreen(
                     tint = Color(0xFF585858)
                 )
             }
-
+            Spacer(modifier = Modifier.height(20.dp))
             // 해설 영역
             Column(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .offset(y = 70.dp)
                     .fillMaxWidth(0.80f)
-                    .height(400.dp)
+                    .height(300.dp)
                     .clip(RoundedCornerShape(24.dp))
                     .background(Color(0xFFF9F6F2))
                     .padding(29.dp),
@@ -148,7 +147,7 @@ fun QuizAnswerScreen(
                     color = Color.Black
                 )
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Icon(
                     imageVector = if (isCorrect) Icons.Outlined.CheckCircle else Icons.Default.Close,
@@ -157,21 +156,21 @@ fun QuizAnswerScreen(
                     modifier = Modifier.size(70.dp)
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
                     text = quiz.explanation ?: "정답: ${quiz.correctAnswer}",
-                    fontSize = 20.sp,
+                    fontSize = 13.sp,
                     fontFamily = pretendardsemibold,
                     color = Color.Black,
                     textAlign = TextAlign.Center
                 )
 
                 if (!isCorrect && !userAnswer.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = "당신의 답: $userAnswer",
-                        fontSize = 16.sp,
+                        fontSize = 11.sp,
                         fontFamily = pretendardsemibold,
                         color = Color.Gray
                     )

@@ -36,6 +36,7 @@ import com.example.planet.MainActivity
 import com.example.planet.R
 import androidx.compose.ui.graphics.asImageBitmap
 
+
 @Composable
 fun GuideResultScreen(
     navController: NavHostController,
