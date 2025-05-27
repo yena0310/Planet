@@ -113,8 +113,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.layout.positionInWindow
-import androidx.compose.ui.layout.positionInWindow
 import com.example.planet.ui.GuideResultScreen
 
 
@@ -134,6 +132,7 @@ class MainActivity : ComponentActivity() {
         var labelGuideText: String = ""
         var labelCapturedBitmap: Bitmap? = null
     }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -149,7 +148,8 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 delay(2000)
                 showSplash = false
-// ✅ 테스트용 이미지 넣기
+
+                // ✅ 테스트용 이미지 넣기
                 val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test_image)
 
                 try {
@@ -171,7 +171,7 @@ class MainActivity : ComponentActivity() {
                     Log.e("YOLO-ERROR", "테스트 이미지 처리 실패", e)
                 }
             }
-                MaterialTheme {
+            MaterialTheme {
                 if (showSplash) {
                     SplashScreen()
                 } else {
@@ -407,7 +407,6 @@ fun SplashScreen() {
     }
 }
 
-
 @Composable
 fun LoginScreen(navController: NavHostController) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
@@ -549,7 +548,6 @@ fun LoginScreen(navController: NavHostController) {
     }
 }
 
-
 //@Preview(showBackground = true)
 @Composable
 fun HomeScreen(navController: NavHostController) {
@@ -580,7 +578,7 @@ fun HomeScreen(navController: NavHostController) {
                 Text(
                     text = "🌞 연속 7일 출석하고 있어요!",
                     style = MaterialTheme.typography.bodyLarge,
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     fontFamily = pretendardsemibold
                 )
                 Text(
@@ -620,6 +618,7 @@ fun HomeScreen(navController: NavHostController) {
                         fontFamily = pretendardbold,
                         modifier = Modifier.padding(start = 15.dp)
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -805,7 +804,6 @@ fun HomeScreen(navController: NavHostController) {
             }
         }
     }
-
 
 //@Preview(showBackground = true)
 @SuppressLint("SuspiciousIndentation")
@@ -1857,7 +1855,6 @@ pretendardbold: FontFamily,
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
-
         ) {
             Row(
                 modifier = Modifier
@@ -2658,8 +2655,10 @@ fun Mypage(navController: NavHostController) {
                                 }
                                 Text("quiz played", fontSize = 12.sp, color = Color.Gray)
                             }
+
                         }
                     }
+
                 }
             }
         }
