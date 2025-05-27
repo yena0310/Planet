@@ -114,6 +114,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.positionInWindow
 import com.example.planet.ui.GuideResultScreen
 
 
@@ -240,6 +241,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+
                 }
             }
         }
@@ -2321,8 +2323,6 @@ fun LeaderboardScreen(navController: NavHostController) {
             }
         }
     }
-
-
 
 @Composable
 fun PodiumItem(name: String, score: Int, rank: Int, modifier: Modifier = Modifier) {
