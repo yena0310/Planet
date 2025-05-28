@@ -171,7 +171,7 @@ fun CameraScreen(navController: NavHostController, mainActivity: MainActivity) {
                 if (selectedTab == "폐기물 분리") {
                     mainActivity.takePhoto(navController)
                 } else {
-                    mainActivity.processDummyLabelImage(navController) // 테스트 이미지
+                    mainActivity.takeLabelPhoto(navController) // 테스트 이미지
                 }
             },
             pretendardbold = pretendardbold

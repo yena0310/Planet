@@ -1,4 +1,4 @@
-package com.example.planet
+package com.example.planet.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,6 +23,9 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import com.example.planet.QuizItem
+import com.example.planet.R
+import com.example.planet.chapter1FullQuizzes
 
 @Composable//-->통합 해설페이지
 fun QuizAnswerScreen(
