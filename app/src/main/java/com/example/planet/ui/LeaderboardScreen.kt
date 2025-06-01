@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,7 +45,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.R
-
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.material.BottomSheetScaffold
+import androidx.compose.material.ExperimentalMaterialApi
+//noinspection UsingMaterialAndMaterial3Libraries
+import androidx.compose.material.rememberBottomSheetScaffoldState
 @Composable
 fun LeaderboardScreen(navController: NavHostController) {
     val pretendard = FontFamily(Font(R.font.pretendardsemibold))
@@ -132,7 +137,7 @@ fun LeaderboardScreen(navController: NavHostController) {
                             text = "#4",
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
-                            fontSize = 25.sp,
+                            fontSize = 21.sp,
                             fontFamily = pretendard
                         )
                     }
@@ -143,20 +148,21 @@ fun LeaderboardScreen(navController: NavHostController) {
                         text = "다른 사용자들보다\n60% 앞서고 있어요!",
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = pretendard,
-                        fontSize = 16.sp,
+                        fontSize = 13.sp,
+                        lineHeight = 15.sp,
                         textAlign = TextAlign.Start,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
-
+            LeaderboardScreenWithBottomSheet()
             Column(modifier = Modifier.fillMaxSize()) {
 
                 // podium 이미지 + 프로필을 포함한 Box
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(300.dp), // 이미지 + Row를 담을 공간
+                        .height(280.dp), // 이미지 + Row를 담을 공간
                     contentAlignment = Alignment.BottomCenter
                 ) {
                     // podium 이미지
@@ -193,10 +199,72 @@ fun LeaderboardScreen(navController: NavHostController) {
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
-                LeaderboardList()
+                Spacer(modifier = Modifier.height(12.dp))
+
 
             }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@Composable
+fun LeaderboardScreenWithBottomSheet() {
+    val sheetState = rememberBottomSheetScaffoldState()
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+
+    BottomSheetScaffold(
+        scaffoldState = sheetState,
+        sheetPeekHeight = 100.dp,
+        sheetContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(screenHeight * 0.9f)
+            ) {
+                LeaderboardList() // ✅ 이미 완성된 리스트!
+            }
+        }
+    ) { innerPadding ->
+        // ✅ 여기 podium UI를 "진짜"로 구성
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(Color(0xFFCAEBF1))
+        ) {
+            // podium 이미지와 Row
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.podium),
+                    contentDescription = "시상대",
+                    modifier = Modifier
+                        .width(300.dp)
+                        .height(200.dp)
+                        .offset(y = 60.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .offset(y = (-120).dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    PodiumItem(name = "이슈니", score = 1469, rank = 2, modifier = Modifier.offset(x = 10.dp))
+                    PodiumItem(name = "김슈니", score = 2569, rank = 1)
+                    PodiumItem(name = "박슈니", score = 1053, rank = 3, modifier = Modifier.offset(x = (-10).dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
         }
     }
 }
@@ -249,15 +317,15 @@ fun PodiumItem(name: String, score: Int, rank: Int, modifier: Modifier = Modifie
             .width(80.dp)
             .offset(y = offsetY),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Box(
             modifier = Modifier
                 .size(50.dp)
                 .border(0.5.dp, Color(0xff53AEBE), shape = CircleShape)
                 .background(avatarColor, shape = CircleShape),
-            contentAlignment = Alignment.Center
-        ) {}
+            contentAlignment = Alignment.Center)
+        {}
 
         Text(
             text = name,
@@ -269,12 +337,12 @@ fun PodiumItem(name: String, score: Int, rank: Int, modifier: Modifier = Modifie
         Box(
             modifier = Modifier
                 .background(Color.White, shape = RoundedCornerShape(40))
-                .padding(horizontal = 12.dp, vertical = 7.dp),
+                .padding(horizontal = 12.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "$score QP",
-                fontSize = 13.sp,
+                text = "$score P",
+                fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.Black
             )
@@ -287,7 +355,7 @@ fun LeaderboardRow(rank: Int, name: String, score: Int, color: Color, isMe: Bool
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(95.dp)
+            .height(85.dp)
             .clip(RoundedCornerShape(32.dp))
             .background(Color.White)
             .padding(horizontal = 20.dp),
