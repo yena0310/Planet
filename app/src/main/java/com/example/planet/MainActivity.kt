@@ -197,7 +197,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.padding(innerPadding)
                                 .background(Color(0xFFCAEBF1))//배경색 지정
                         ) {
-                            composable("login") { LoginScreen(navController) }
+                            composable("login") { LoginScreen({}, navController) }
                             composable("home") { HomeScreen(navController) }
                             composable("quiz") { StudyQuizPage(navController) }
                             composable("rank") { LeaderboardScreen(navController) }
