@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,64 +41,50 @@ import androidx.navigation.NavHostController
 import com.example.planet.R
 
 @Composable
-fun Mypage(navController: NavHostController){
+fun Mypage(navController: NavHostController) {
     val pretendardBold = FontFamily(Font(R.font.pretendardbold))
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            //.padding(innerPadding)
             .background(Color(0xFFCAEBF1))
-    ) {// Settings Icon
-        Icon(
-            imageVector = Icons.Default.Settings,
-            contentDescription = "Settings",
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 50.dp, end = 20.dp)
-                .size(28.dp),
-            tint = Color.Gray
-        )
-
-
-
-        // 흰색 카드 박스
+    ) {
+        // ✅ 1. 하얀 카드 (배경으로)
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 160.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(top = 100.dp)
         ) {
-            Spacer(modifier = Modifier.weight(1f))
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 25.dp, end = 25.dp)
+                    .padding(horizontal = 25.dp)
                     .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                     .background(Color.White)
-                    .height(600.dp)
             ) {
-                Text(
-                    text = "한국초등학교\n1학년 1반",
-                    fontSize = 12.sp,
-                    fontFamily = pretendardBold,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(start = 24.dp, top=20.dp) // 왼쪽 패딩만 줌
-                )
-
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 100.dp),
+                        .padding(horizontal = 24.dp, vertical = 80.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Rank box
+                    // 학교명 텍스트
+                    Text(
+                        text = "한국초등학교\n1학년 1반",
+                        fontSize = 12.sp,
+                        fontFamily = pretendardBold,
+                        lineHeight = 15.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // 랭킹 박스
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(80.dp)
-                            .background(Color.White)
+                            .height(70.dp)
                             .customShadow()
                             .background(Color(0xFF7AD1E0), RoundedCornerShape(16.dp))
                             .padding(vertical = 12.dp),
@@ -106,36 +93,36 @@ fun Mypage(navController: NavHostController){
                     ) {
                         Text(
                             "내 등수\n#6",
-                            fontSize = 14.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF343434),
-                            textAlign = TextAlign.Center,
-                            //modifier = Modifier.fillMaxWidth(0.4f)
+                            lineHeight = 15.sp,
+                            textAlign = TextAlign.Center
                         )
-                        // ✅ 수직 선 (Divider)
                         Box(
                             modifier = Modifier
                                 .width(1.dp)
-                                .height(36.dp) // 선의 높이
-                                .background(Color(0xFF0C092A).copy(alpha = 0.3f)) // 연한 검정
+                                .height(36.dp)
+                                .background(Color(0xFF0C092A).copy(alpha = 0.3f))
                         )
                         Text(
                             "학급 등수\n#14",
-                            fontSize = 14.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = 15.sp,
                             color = Color(0xFF343434),
-                            textAlign = TextAlign.Center,
-                            //modifier = Modifier.fillMaxWidth(0.4f)
+                            textAlign = TextAlign.Center
                         )
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Quiz progress box
+                    // 퀴즈 박스
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(500.dp)
+                            .fillMaxHeight()
+                            //.height(1500.dp)
                             .background(Color(0xFFBCE4EC), RoundedCornerShape(16.dp))
                             .padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -149,88 +136,93 @@ fun Mypage(navController: NavHostController){
                                 }
                                 append("를 풀었어요!")
                             },
-                            fontSize = 18.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(20.dp))
 
-                        // Circular progress indicator
+                        Spacer(modifier = Modifier.height(15.dp))
+
                         Box(
-                            modifier = Modifier.size(160.dp),
+                            modifier = Modifier.size(140.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            // 배경 원: 흰색 전체 100%
                             CircularProgressIndicator(
-                                progress = {1f},
+                                progress = { 1f },
                                 modifier = Modifier.fillMaxSize(),
                                 color = Color.White,
-                                strokeWidth = 12.dp
+                                strokeWidth = 10.dp
                             )
-
-                            // 실제 진행도: 75%
                             CircularProgressIndicator(
-                                progress = {0.75f},
+                                progress = { 0.75f },
                                 modifier = Modifier.fillMaxSize(),
                                 color = Color(0xFF28B6CC),
-                                strokeWidth = 12.dp
+                                strokeWidth = 10.dp
                             )
-
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Row(verticalAlignment = Alignment.Bottom) {
-                                    Text("75", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0A0A32))
+                                    Text("75", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0A0A32))
                                     Spacer(modifier = Modifier.width(2.dp))
                                     Text("/100", fontSize = 16.sp, color = Color(0x8028B6CC))
                                 }
-                                Text("quiz played", fontSize = 16.sp, color = Color.Gray) // ✅ 원 안에 들어감
+                                Text("quiz played", fontSize = 12.sp, color = Color.Gray)
                             }
-
                         }
-
                     }
                 }
-
             }
         }
-    }
-    // 프로필 영역 전체
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 100.dp), // 🔽 화면 아래로 내림
-        horizontalAlignment = Alignment.CenterHorizontally // 🔽 가운데 정렬
-    ){
-        Box(
-            contentAlignment = Alignment.BottomEnd,
+        // ✅ 2. 프로필 이미지와 이름 (겹치게 위에 띄움)
+        Column(
             modifier = Modifier
-                .size(100.dp) // 프로필 이미지 전체 크기
+                .align(Alignment.TopCenter)
+                .offset(y = 60.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 핑크색 원
             Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFD69ACC)) // 연한 분홍색
-            )
-
-            // ✏️ 편집 아이콘
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .offset(x = (-6).dp, y = (-6).dp)
-                    .border(2.dp, Color.Gray, CircleShape)
-                    .background(Color.White, CircleShape),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.BottomEnd,
+                modifier = Modifier.size(100.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit Profile",
-                    modifier = Modifier.size(18.dp),
-                    tint = Color.Gray
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFD69ACC))
                 )
+
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .offset(x = (-6).dp, y = (-6).dp)
+                        .border(2.dp, Color.Gray, CircleShape)
+                        .background(Color.White, CircleShape),
+                    contentAlignment = Alignment.Center
+                ){
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit Profile",
+                        modifier = Modifier.size(18.dp),
+                        tint = Color.Gray
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.height(6.dp))
+            Text("김아무개", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
-        Spacer(modifier = Modifier.height(10.dp))
-        // Name
-        Text("김아무개", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+
+        // ✅ 3. 설정 아이콘 (맨 위 고정)
+        Icon(
+            imageVector = Icons.Default.Settings,
+            contentDescription = "Settings",
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 50.dp, end = 20.dp)
+                .size(28.dp),
+            tint = Color.Gray
+        )
     }
 }
+
+
+
+
