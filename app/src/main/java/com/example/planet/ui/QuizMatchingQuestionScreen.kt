@@ -1,22 +1,13 @@
 package com.example.planet.ui
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,20 +15,15 @@ import androidx.compose.material.icons.rounded.ArrowBackIosNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.Font
@@ -52,7 +38,7 @@ import com.example.planet.R
 import com.example.planet.chapter3Quizzes
 import kotlinx.coroutines.delay
 
-@Composable//-->매칭형 문제페이지
+@Composable
 fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem, index: Int) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val quizzes = chapter3Quizzes
@@ -62,11 +48,13 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
 
     var selectedQuestion by remember { mutableStateOf<String?>(null) }
     val matchedPairs = remember { mutableStateListOf<Pair<String, String>>() }
-
     val questionDotCoords = remember { mutableMapOf<String, Offset>() }
     val answerDotCoords = remember { mutableMapOf<String, Offset>() }
-    val density = LocalDensity.current
+    val matchedLines = remember { mutableStateListOf<Pair<Offset, Offset>>() }
     val context = LocalContext.current
+    val rootCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
+
+    val lineOffsetX = with(LocalDensity.current) { 12.dp.toPx() } // 원하는 만큼 조절
     LaunchedEffect(Unit) {
         context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
             .edit()
@@ -84,11 +72,29 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF7AC5D3))
+            .onGloballyPositioned { rootCoords.value = it }
     ) {
+        val lineOffsetX = 20f
+        // 🟡 선을 제일 위에 그리기 위한 Canvas
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(1f)
+        ) {
+            matchedLines.forEach { (start, end) ->
+                drawLine(
+                    color = Color.Black,
+                    start = start.copy(x = start.x + lineOffsetX),
+                    end = end.copy(x = end.x - lineOffsetX),
+                    strokeWidth = 4f
+                )
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp)
+                .padding(horizontal = 16.dp)
                 .align(Alignment.BottomCenter)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                 .background(Color.White)
@@ -112,13 +118,11 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
                             contentDescription = "뒤로 가기"
                         )
                     }
-
                     Text(
                         text = "${index + 1} / 20",
                         fontSize = 18.sp,
                         fontFamily = pretendardsemibold
                     )
-
                     Text(
                         text = "89 P",
                         fontSize = 13.sp,
@@ -137,146 +141,113 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
                     textAlign = TextAlign.Center
                 )
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 50.dp)
-                        .height(700.dp)
-                ) {
-                    // -------------왼쪽 질문-------------
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp)
+                            .height(700.dp)
                     ) {
-                        Spacer(modifier = Modifier.height(80.dp))
-                        questions.forEach { question ->
-                            val isSelected = selectedQuestion == question
-                            val bgColor by animateColorAsState(
-                                if (isSelected) Color(0xFFB3E5FC) else Color(0xFFE0F7FA),
-                                animationSpec = tween(300)
-                            )
-
-                            Box(
-                                modifier = Modifier
-                                    .width(110.dp)
-                                    .padding(top = 8.dp, bottom = 8.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(bgColor)
-                                    .clickable { selectedQuestion = question }
-                                    .padding(12.dp),
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(20.dp)
+                        ) {
+                            Spacer(modifier = Modifier.height(60.dp))
+                            questions.forEach { question ->
+                                Box(
                                     modifier = Modifier
-                                        .onGloballyPositioned { layoutCoordinates ->
-                                            val position = layoutCoordinates.positionInRoot()
-                                            val center = with(density) {
-                                                position + Offset(
-                                                    layoutCoordinates.size.width / 2f,
-                                                    layoutCoordinates.size.height / 2f
-                                                )
+                                        .width(140.dp)
+                                        .height(50.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFFE0F7FA))
+                                        .clickable { selectedQuestion = question }
+                                        .onGloballyPositioned { coords ->
+                                            rootCoords.value?.let { root ->
+                                                val rightCenter = coords.positionInWindow() + Offset(coords.size.width.toFloat(), coords.size.height / 2f)
+                                                val relative = rightCenter - root.positionInWindow()
+                                                questionDotCoords[question] = relative
+
+                                                Log.d("QuizDebug", "QuestionDot[$question] = $relative")
                                             }
-                                            questionDotCoords[question] = center
-                                        })
-                                {
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
                                     Text(
                                         text = question,
                                         fontSize = 16.sp,
                                         fontFamily = pretendardsemibold,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.weight(1f)
+                                        textAlign = TextAlign.Center
                                     )
-
                                     Box(
                                         modifier = Modifier
-                                            .size(8.dp)
+                                            .align(Alignment.CenterEnd)
+                                            .offset(x = (-4).dp)
+                                            .size(6.dp)
                                             .clip(CircleShape)
                                             .background(Color.DarkGray)
+                                    )
+                                }
+                            }
+                        }
 
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(20.dp),
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            Spacer(modifier = Modifier.height(40.dp))
+                            answers.forEach { answer ->
+                                Box(
+                                    modifier = Modifier
+                                        .width(150.dp)
+                                        .height(50.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFFF1F8E9))
+                                        .clickable {
+                                            val selected = selectedQuestion
+                                            if (selected != null && !matchedPairs.any { it.first == selected && it.second == answer }) {
+                                                val startRaw = questionDotCoords[selected]
+                                                val endRaw = answerDotCoords[answer]
+                                                val start = startRaw?.copy(x = startRaw.x -45.5f)  // 왼쪽 박스 오른쪽 모서리로
+                                                val end = endRaw?.copy(x = endRaw.x + 14.5f)
+                                                if (start != null && end != null) {
+                                                    matchedPairs.add(Pair(selected, answer))
+                                                    matchedLines.add(Pair(start, end))
+                                                    selectedQuestion = null
+                                                }
+                                            }
+                                        }
+                                        .onGloballyPositioned { coords ->
+                                            rootCoords.value?.let { root ->
+                                                val leftCenter = coords.positionInWindow() + Offset(0f, coords.size.height / 2f)
+                                                val relative = leftCenter - root.positionInWindow()
+                                                answerDotCoords[answer] = relative
+                                                Log.d("QuizDebug", "AnswerDot[$answer] = $relative")
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = answer,
+                                        fontSize = 16.sp,
+                                        fontFamily = pretendardsemibold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.CenterStart)
+                                            .offset(x = (4).dp)
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.DarkGray)
                                     )
                                 }
                             }
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // ----------오른쪽 답변--------------
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    answers.forEach { answer ->
-                        Box(
-                            modifier = Modifier
-                                .width(140.dp)
-                                .width(150.dp)
-                                .padding(top = 10.dp, bottom = 4.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFF1F8E9))
-                                .clickable {
-                                    selectedQuestion?.let { question ->
-                                        if (!matchedPairs.any { it.first == question || it.second == answer }) {
-                                            matchedPairs.add(question to answer)
-                                        }
-                                        selectedQuestion = null
-                                    }
-                                }
-                                .padding(8.dp),
-                            contentAlignment = Alignment.CenterEnd
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(5.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.DarkGray)
-                                        .onGloballyPositioned { layoutCoordinates ->
-                                            val position = layoutCoordinates.positionInRoot()
-                                            val center = with(density) {
-                                                position + Offset(
-                                                    layoutCoordinates.size.width / 2f,
-                                                    layoutCoordinates.size.height / 2f
-                                                )
-                                            }
-                                            answerDotCoords[answer] = center
-                                        })
-
-                                Spacer(modifier = Modifier.width(7.dp))
-                                Text(
-                                    text = answer,
-                                    fontSize = 16.sp,
-                                    fontFamily = pretendardsemibold
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Canvas(
-        modifier = Modifier
-            .fillMaxSize()
-            .zIndex(1f)
-    ) {
-        matchedPairs.forEach { (q, a) ->
-            val start = questionDotCoords[q]
-            val end = answerDotCoords[a]
-            if (start != null && end != null) {
-                drawLine(
-                    color = Color.Black,
-                    start = start,
-                    end = end,
-                    strokeWidth = 4f
-                )
             }
         }
     }

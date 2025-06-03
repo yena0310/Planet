@@ -1,289 +1,248 @@
+package com.example.planet.ui
+
+import android.content.Context
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
-import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.rounded.ArrowBackIosNew
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
+import com.example.planet.QuizItem
 import com.example.planet.R
-import com.example.planet.ui.customShadow
+import com.example.planet.chapter3Quizzes
+import kotlinx.coroutines.delay
+import android.util.Log
 
+@Preview
 @Composable
-fun HomeScreen(navController: NavHostController) {
-
+fun QuizMatchingQuestionScreen(/*navController: NavHostController, quiz: QuizItem, index: Int*/) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
-    val pretendardbold = FontFamily(Font(R.font.pretendardbold))
-    val iconTint = Color(0xFF546A6E)
+    val quizzes = chapter3Quizzes
 
+    val questions = quizzes.map { it.question }
+    val answers = quizzes.map { it.correctAnswer }
 
-    Column(
+    var selectedQuestion by remember { mutableStateOf<String?>(null) }
+    val matchedPairs = remember { mutableStateListOf<Pair<String, String>>() }
+    val questionDotCoords = remember { mutableMapOf<String, Offset>() }
+    val answerDotCoords = remember { mutableMapOf<String, Offset>() }
+    val matchedLines = remember { mutableStateListOf<Pair<Offset, Offset>>() }
+    val context = LocalContext.current
+    val rootCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
+
+    LaunchedEffect(Unit) {
+        context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
+            .edit()
+            //.putInt("last_index", index)
+            .apply()
+    }
+    LaunchedEffect(matchedPairs.size) {
+        if (matchedPairs.size == questions.size) {
+            delay(1000)
+            //navController.navigate("quiz_result")
+        }
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFCAEBF1))
-            .padding(
-                start = 20.dp,
-                end = 20.dp,
-                top = 70.dp
-            ).navigationBarsPadding() // ✅ 네비게이션 바 영역까지 포함
-
+            .background(Color(0xFF7AC5D3))
+            .onGloballyPositioned { rootCoords.value = it }
     ) {
-
-        // ======= 출석 헤더 =======
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "🌞 연속 7일 출석하고 있어요!",
-                style = MaterialTheme.typography.bodyLarge,
-                fontSize = 14.sp,
-                fontFamily = pretendardsemibold
-            )
-            Text(
-                text = "89 P",
-                fontSize = 14.sp,
-                color = Color.Black,
-                fontFamily = pretendardsemibold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // ======= 최근 퀴즈 박스 (버튼 + 그림자 + TODO 이동) =======
-        Surface(
-            tonalElevation = 8.dp,
-            shadowElevation = 8.dp,
-            shape = RoundedCornerShape(20.dp),
-            color = Color.White,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp)
-                .customShadow()
-                .clickable {
-                    navController.navigate("quiz_question/0")
-                }
+                .padding(horizontal = 16.dp)
+                .align(Alignment.BottomCenter)
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                .background(Color.White)
+                .height(800.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 14.dp, vertical = 10.dp), // 더 위로 붙임
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "RECENT QUIZ",
-                    color = Color.Gray,
-                    fontSize = 10.06.sp,
-                    fontFamily = pretendardbold,
-                    modifier = Modifier.padding(start = 15.dp)
-                )
+            Column {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 13.dp, end = 13.dp, top = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "첫 문제를 풀어보세요 !", // TODO: 히스토리 확인해서 최근 문제 또는 첫 문제로 멘트 변경
-                            color = Color(0xFF546A6E),
-                            fontSize = 15.sp,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontFamily = pretendardbold
-                        )
-
-                        Spacer(modifier = Modifier.width(6.dp))
-
+                    IconButton(onClick = {
+                        //navController.navigate("quiz")
+                    }) {
                         Icon(
-                            imageVector = Icons.Default.KeyboardDoubleArrowRight,
-                            contentDescription = "Next",
-                            tint = Color(0xFF546A6E)
+                            imageVector = Icons.Rounded.ArrowBackIosNew,
+                            modifier = Modifier.size(25.dp),
+                            tint = Color.Gray,
+                            contentDescription = "뒤로 가기"
                         )
                     }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // ======= 순위 박스 (그림자 + 텍스트 색상 수정 + 구분선 추가) =======
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .customShadow()
-                .height(60.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "내 등수",
-                        fontSize = 11.sp,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = pretendardbold,
-                        color = Color(0xFF284449)
+                        text = "${/*index + */1} / 20",
+                        fontSize = 18.sp,
+                        fontFamily = pretendardsemibold
                     )
                     Text(
-                        text = "# 6",
+                        text = "89 P",
                         fontSize = 13.sp,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontFamily = pretendardbold,
-                        color = Color(0xFF284449)
+                        color = Color.Gray,
+                        fontFamily = pretendardsemibold
                     )
                 }
 
-                // 👉 중앙 세로 구분선
-                Box(
+                Text(
+                    text = "쓰레기와 배출방법을\n올바르게 연결하세요",
+                    fontSize = 24.sp,
+                    fontFamily = pretendardsemibold,
                     modifier = Modifier
-                        .width(1.dp)               // 세로선이므로 width는 얇게
-                        .height(30.dp)             // 높이는 원하는 만큼
-                        .background(Color.LightGray)
+                        .align(Alignment.CenterHorizontally)
+                        .padding(top = 20.dp, bottom = 10.dp),
+                    textAlign = TextAlign.Center
                 )
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "학교 점수",
-                        fontSize = 11.sp,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = pretendardbold,
-                        color = Color(0xFF284449)
-                    )
-                    Text(
-                        text = "# 14",
-                        fontSize = 13.sp,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontFamily = pretendardbold,
-                        color = Color(0xFF284449)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .customShadow()
-                .height(IntrinsicSize.Min), // 높이 고정보다는 콘텐츠에 맞게
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "분리배출 도우미",
-                    fontSize = 15.sp,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontFamily = pretendardbold,
-                    color = Color(0xFF284449)
-                )
-
-                Text(
-                    text = "헷갈리는 분리배출, AI 가이드를 받아보세요!",
-                    fontSize = 13.sp,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = pretendardbold,
-                    color = Color(0xff859DA1)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center, // 버튼들 전체 중앙 정렬
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp)
+                            .height(700.dp)
                     ) {
-                        Button(
-                            onClick = { /* TODO: 폐기물 분류 클릭 이벤트 */ },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE4FBFF))
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(20.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "폐기물 분류",
-                                    fontSize = 12.sp,
-                                    fontFamily = pretendardbold,
-                                    color = Color(0xFF284449)
-                                )
+                            Spacer(modifier = Modifier.height(60.dp))
+                            questions.forEach { question ->
+                                Box(
+                                    modifier = Modifier
+                                        .width(140.dp)
+                                        .height(50.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFFE0F7FA))
+                                        .clickable { selectedQuestion = question }
+                                        .onGloballyPositioned { coords ->
+                                            rootCoords.value?.let { root ->
+                                                val center = coords.positionInWindow() + Offset(coords.size.width / 2f, coords.size.height / 2f)
+                                                val relative = center - root.positionInWindow()
+                                                questionDotCoords[question] = relative
 
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
-                                    contentDescription = "Next",
-                                    tint = iconTint,
-                                    modifier = Modifier.size(14.dp)
-                                )
+                                                Log.d("QuizDebug", "QuestionDot[$question] = $relative")
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = question,
+                                        fontSize = 16.sp,
+                                        fontFamily = pretendardsemibold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.CenterEnd)
+                                            .offset(x = (-4).dp)
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.DarkGray)
+                                    )
+                                }
                             }
                         }
 
-                        Button(
-                            onClick = { /* TODO: 분리배출 표시 클릭 이벤트 */ },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE4FBFF))
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "분리배출 표시",
-                                    fontSize = 12.sp,
-                                    fontFamily = pretendardbold,
-                                    color = Color(0xFF284449)
-                                )
+                        Spacer(modifier = Modifier.width(12.dp))
 
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
-                                    contentDescription = "Next",
-                                    tint = iconTint,
-                                    modifier = Modifier.size(14.dp)
-                                )
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(20.dp),
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            Spacer(modifier = Modifier.height(40.dp))
+                            answers.forEach { answer ->
+                                Box(
+                                    modifier = Modifier
+                                        .width(150.dp)
+                                        .height(50.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFFF1F8E9))
+                                        .clickable {
+                                            val selected = selectedQuestion
+                                            if (selected != null && !matchedPairs.any { it.first == selected && it.second == answer }) {
+                                                val start = questionDotCoords[selected]
+                                                val end = answerDotCoords[answer]
+                                                if (start != null && end != null) {
+                                                    matchedPairs.add(Pair(selected, answer))
+                                                    matchedLines.add(Pair(start, end))
+                                                    selectedQuestion = null
+                                                }
+                                            }
+                                        }
+                                        .onGloballyPositioned { coords ->
+                                            rootCoords.value?.let { root ->
+                                                val center = coords.positionInWindow() + Offset(coords.size.width / 2f, coords.size.height / 2f)
+                                                val relative = center - root.positionInWindow()
+                                                answerDotCoords[answer] = relative
+
+                                                Log.d("QuizDebug", "AnswerDot[$answer] = $relative")
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = answer,
+                                        fontSize = 16.sp,
+                                        fontFamily = pretendardsemibold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.CenterStart)
+                                            .offset(x = (4).dp)
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.DarkGray)
+                                    )
+                                }
                             }
+                        }
+                    }
+
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .zIndex(1f)
+                    ) {
+                        matchedLines.forEach { (start, end) ->
+                            drawLine(
+                                color = Color.Black,
+                                start = start,
+                                end = end,
+                                strokeWidth = 4f
+                            )
                         }
                     }
                 }
