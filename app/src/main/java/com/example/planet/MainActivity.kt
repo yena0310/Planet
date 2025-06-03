@@ -134,7 +134,7 @@ class MainActivity : ComponentActivity() {
                                 QuizMatchingQuestionScreen(
                                     navController = navController,
                                     quiz = chapter3Quizzes[0], // 혹은 필요한 index로 설정
-                                    index = 10 // 11번째 문제라면 10
+                                    index = 15 // 11번째 문제라면 10
                                 )
                             }
                             composable(

@@ -90,7 +90,7 @@ fun HomeScreen(navController: NavHostController) {
                 .height(80.dp)
                 .customShadow()
                 .clickable {
-                    navController.navigate("quiz_question/0")
+                    navController.navigate("matching_quiz")//("quiz_question/0")
                 }
         ) {
             Column(
