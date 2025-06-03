@@ -7,6 +7,7 @@ import com.example.planet.ui.GuideResultScreen
 import com.example.planet.ui.HomeScreen
 import com.example.planet.ui.LeaderboardScreen
 import com.example.planet.ui.LoginScreen
+import com.example.planet.ui.WelcomeScreen
 import com.example.planet.ui.Mypage
 import com.example.planet.ui.QuizAnswerScreen
 import com.example.planet.ui.QuizMatchingQuestionScreen
@@ -16,73 +17,29 @@ import com.example.planet.ui.QuizSubjectiveQuestionScreen
 import com.example.planet.ui.RecycleSignGuide
 import com.example.planet.ui.SplashScreen
 import com.example.planet.ui.StudyQuizPage
-import com.example.planet.ui.customShadow
 import com.example.planet.guide.LabelDetector
 
 // Android 기본
-import android.annotation.SuppressLint
-import android.content.Context
 import android.os.Bundle
 import android.util.Log
 
 // Activity & CameraX
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.Preview as CameraXPreview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 
 // Compose 기본
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
-import androidx.compose.ui.platform.*
-import androidx.compose.ui.unit.*
-import androidx.compose.ui.text.*
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.geometry.*
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.font.*
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 
-
 // Compose Foundation
-import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.*
-import androidx.compose.foundation.text.*
-import androidx.compose.foundation.lazy.LazyColumn
 
 // Compose Material3
 import androidx.compose.material3.*
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
-
-// Icons
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material.icons.automirrored.filled.*
-import androidx.compose.material.icons.automirrored.rounded.*
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.painter.ColorPainter
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
-import androidx.lifecycle.LifecycleOwner
-
-// 기타
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberPermissionState
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 
 import kotlinx.coroutines.delay
 
@@ -92,33 +49,20 @@ import androidx.camera.core.ImageProxy
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-
-import androidx.camera.core.*
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.navigation.compose.*
 import java.nio.ByteBuffer
 
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import android.graphics.Matrix
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
-
 
 class MainActivity : ComponentActivity() {
 
@@ -152,28 +96,6 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 delay(2000)
                 showSplash = false
-
-                // ✅ 테스트용 이미지 넣기
-                /*val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test_image)
-
-                try {
-                    val results = detector.detect(bitmap, confidenceThreshold = 0.1f)
-                    if (results.isEmpty()) {
-                        Log.d("YOLO-DEBUG", "결과 없음")
-                    } else {
-                        results.forEachIndexed { i, it ->
-                            Log.d("YOLO-RESULT", "[$i] classId=${it.classId}, confidence=${it.confidence}, guide=${it.guide}")
-                        }
-                    }
-                    Log.d("YOLO-DEBUG", "Test Image Detection Count: ${results.size}")
-
-                    results.forEachIndexed { i, it ->
-                        Log.d("YOLO-CLASS", "[$i] class=${it.classId}, confidence=${it.confidence}")
-                        Log.d("YOLO-GUIDE", "guide=${it.guide}")
-                    }
-                } catch (e: Exception) {
-                    Log.e("YOLO-ERROR", "테스트 이미지 처리 실패", e)
-                }*/
             }
             MaterialTheme {
                 if (showSplash) {
@@ -193,11 +115,12 @@ class MainActivity : ComponentActivity() {
                     ) { innerPadding ->
                         NavHost(
                             navController = navController,
-                            startDestination = "home",
+                            startDestination = "login",
                             modifier = Modifier.padding(innerPadding)
                                 .background(Color(0xFFCAEBF1))//배경색 지정
                         ) {
-                            composable("login") { LoginScreen({}, navController) }
+                            composable("login") { LoginScreen(navController) }
+                            composable("welcome") { WelcomeScreen(navController) }
                             composable("home") { HomeScreen(navController) }
                             composable("quiz") { StudyQuizPage(navController) }
                             composable("rank") { LeaderboardScreen(navController) }
