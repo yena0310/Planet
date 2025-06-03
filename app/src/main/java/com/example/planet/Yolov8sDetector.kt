@@ -37,7 +37,7 @@ class Yolov8sDetector(context: Context) {
             fileDescriptor.declaredLength
         )
         interpreter = Interpreter(modelBuffer)
-        Log.d("YOLO-INFO", "클래스 목록: ${classIdToGuide.map { (id, guide) -> "$id: $guide" }.joinToString()}")
+        //Log.d("YOLO-INFO", "클래스 목록: ${classIdToGuide.map { (id, guide) -> "$id: $guide" }.joinToString()}")
     }
 
     fun detect(bitmap: Bitmap, confidenceThreshold: Float = 0.5f): List<DetectionResult> {
