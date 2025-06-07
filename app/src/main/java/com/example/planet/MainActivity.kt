@@ -258,9 +258,9 @@ class MainActivity : ComponentActivity() {
                             labelGuideText = guideText
                             navController.navigate("recycle_sign_guide")
                         },
-                        onError = { resultBitmap, _ ->
-                            labelGuideText = "분리배출 표시를 인식하지 못했습니다.\n다시 촬영해주세요 :("
+                        onError = { resultBitmap, guideText ->
                             labelCapturedBitmap = resultBitmap
+                            labelGuideText = guideText
                             navController.navigate("recycle_sign_guide")
                         }
                     )

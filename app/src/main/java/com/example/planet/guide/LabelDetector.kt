@@ -43,7 +43,9 @@ class LabelDetector(private val context: Context) {
             ) {
                 Log.d("DEBUG", "✅ 서버 응답 수신: ${response.code()}")
                 if (response.isSuccessful && response.body() != null) {
+                    Log.d("DEBUG", "🌀성공적으로 수신 완료!")
                     onResult(resizedBitmap, response.body()!!.guide)
+                    Log.d("DEBUG", "🍇가이드 : ${response.body()!!.guide}")
                 } else {
                     onError(resizedBitmap, "서버 응답 오류: ${response.code()}")
                 }

@@ -1,6 +1,5 @@
 package com.example.planet.ui
 
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +29,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,7 +41,6 @@ import com.example.planet.R
 fun RecycleSignGuide(navController: NavHostController, guideText: String) {
 
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
-    val guideText = Uri.decode(navController.currentBackStackEntry?.arguments?.getString("guideText") ?: "분리배출 표시를 인식하지 못했습니다.\n다시 촬영해주세요 :(")
 
     Scaffold(
 
@@ -134,7 +133,12 @@ fun RecycleSignGuide(navController: NavHostController, guideText: String) {
                         fontSize = 20.sp,
                         color = Color.Black,
                         fontFamily = pretendardsemibold,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        softWrap = true, // ✅ 줄바꿈 허용
+                        lineHeight = 28.sp, // ✅ 줄 간격 조정 (선택)
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .padding(horizontal = 8.dp)
                     )
                 }
             }
