@@ -65,6 +65,10 @@ import androidx.navigation.NavType
 import android.graphics.Matrix
 import com.example.planet.ui.SettingScreen
 
+// Firebase 추가
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+
 class MainActivity : ComponentActivity() {
 
     lateinit var imageCapture: ImageCapture
@@ -92,14 +96,25 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             var showSplash by remember { mutableStateOf(true) }
+            var startDestination by remember { mutableStateOf("login") }
+            var isCheckingAuth by remember { mutableStateOf(true) }
             val context = LocalContext.current
 
+            // 🆕 사용자 인증 상태 확인
             LaunchedEffect(Unit) {
-                delay(2000)
+                Log.d("MainActivity", "앱 시작 - 사용자 인증 상태 확인")
+                checkUserAuthentication { destination ->
+                    startDestination = destination
+                    isCheckingAuth = false
+                    Log.d("MainActivity", "시작 경로 결정: $destination")
+                }
+
+                delay(2000) // 스플래시 화면 시간
                 showSplash = false
             }
+
             MaterialTheme {
-                if (showSplash) {
+                if (showSplash || isCheckingAuth) {
                     SplashScreen()
                 } else {
                     Scaffold(
@@ -116,7 +131,7 @@ class MainActivity : ComponentActivity() {
                     ) { innerPadding ->
                         NavHost(
                             navController = navController,
-                            startDestination = "login",
+                            startDestination = startDestination, // 🆕 동적으로 시작 경로 설정
                             modifier = Modifier.padding(innerPadding)
                                 .background(Color(0xFFCAEBF1))//배경색 지정
                         ) {
@@ -170,9 +185,39 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-
                 }
             }
+        }
+    }
+
+    // 🆕 사용자 인증 상태 확인 함수
+    private fun checkUserAuthentication(onResult: (String) -> Unit) {
+        val auth = FirebaseAuth.getInstance()
+        val currentUser = auth.currentUser
+
+        Log.d("MainActivity", "현재 사용자: ${currentUser?.uid}")
+
+        if (currentUser != null) {
+            // 사용자가 로그인되어 있으면 Firestore에서 사용자 정보 확인
+            val db = FirebaseFirestore.getInstance()
+
+            db.collection("users").document(currentUser.uid).get()
+                .addOnSuccessListener { document ->
+                    if (document.exists()) {
+                        Log.d("MainActivity", "사용자 정보 존재 - 홈으로 이동")
+                        onResult("home") // 사용자 정보가 있으면 바로 홈으로
+                    } else {
+                        Log.d("MainActivity", "사용자 정보 없음 - 로그인 화면으로")
+                        onResult("login") // 사용자 정보가 없으면 로그인 화면으로
+                    }
+                }
+                .addOnFailureListener { e ->
+                    Log.e("MainActivity", "사용자 정보 확인 실패", e)
+                    onResult("login") // 오류 발생 시 로그인 화면으로
+                }
+        } else {
+            Log.d("MainActivity", "로그인되지 않은 사용자 - 로그인 화면으로")
+            onResult("login") // 로그인되지 않았으면 로그인 화면으로
         }
     }
 
