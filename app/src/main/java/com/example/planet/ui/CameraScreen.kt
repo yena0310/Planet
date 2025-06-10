@@ -72,7 +72,7 @@ fun CameraScreenContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 30.dp),
+                    .padding(horizontal = 16.dp, vertical = 40.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // 🔙 뒤로가기 버튼 (왼쪽)
@@ -119,8 +119,7 @@ fun CameraScreenContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(400.dp) // ✅ 높이 줄임
-                    .padding(horizontal = 16.dp)
+                    .height(500.dp)
             ) {
                 CameraPreview(
                     context = LocalContext.current,
@@ -129,14 +128,13 @@ fun CameraScreenContent(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp)) // ✅ 위아래 여백 줄임
+            Spacer(modifier = Modifier.height(40.dp))
 
             // 📸 하단 촬영 버튼
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(bottom = 0.dp), // ✅ 아래 여백 제거로 위로 올림
+                    .navigationBarsPadding(),
                 contentAlignment = Alignment.Center
             ) {
                 IconButton(
