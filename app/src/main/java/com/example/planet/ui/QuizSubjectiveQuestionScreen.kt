@@ -42,14 +42,25 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.QuizItem
 import com.example.planet.R
+import com.example.planet.data.UserQuizRepository
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable//->주관식형 문제 페이지
-fun QuizSubjectiveQuestionScreen(navController: NavHostController, quiz: QuizItem, index: Int) {
-
+fun QuizSubjectiveQuestionScreen(
+    navController: NavHostController,
+    quizList: List<QuizItem>, // ✅ 퀴즈 전체 리스트
+    index: Int // ✅ 현재 인덱스
+) {
+    val quiz = quizList[index] // ✅ 해당 인덱스의 퀴즈만 사용
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     var answer by remember { mutableStateOf("") }
     val context = LocalContext.current
+
     LaunchedEffect(Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        if (userId != null) {
+            UserQuizRepository.updateLastQuestionIndex(userId, index)
+        }
         context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
             .edit()
             .putInt("last_index", index)
@@ -92,7 +103,7 @@ fun QuizSubjectiveQuestionScreen(navController: NavHostController, quiz: QuizIte
                 }
 
                 Text(
-                    text = "${index + 1} / 20",
+                    text = "${index + 21} / 100",
                     fontSize = 18.sp,
                     color = Color.Black,
                     fontFamily = pretendardsemibold

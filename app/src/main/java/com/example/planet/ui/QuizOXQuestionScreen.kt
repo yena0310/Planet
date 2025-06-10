@@ -33,19 +33,29 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.QuizItem
 import com.example.planet.R
+import com.example.planet.data.UserQuizRepository
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable//-->O/X 문제페이지
-fun QuizOXQuestionScreen(navController: NavHostController, quiz: QuizItem, index: Int) {
-
-    val pretendardsemibold = FontFamily(
-        Font(R.font.pretendardsemibold)
-    )
+fun QuizOXQuestionScreen(
+    navController: NavHostController,
+    quizList: List<QuizItem>, // ✅ 리스트 전체 전달
+    index: Int // ✅ 인덱스 전달
+) {
+    val quiz = quizList[index] // ✅ 현재 퀴즈 아이템 가져오기
+    val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val context = LocalContext.current
+
     LaunchedEffect(Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        if (userId != null) {
+            UserQuizRepository.updateLastQuestionIndex(userId, index)
+        }
         context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
             .edit()
             .putInt("last_index", index)
             .apply()
+
     }
     Box(
         modifier = Modifier
@@ -84,7 +94,7 @@ fun QuizOXQuestionScreen(navController: NavHostController, quiz: QuizItem, index
                 }
 
                 Text(
-                    text = "${index + 1} / 20", // 문제 번호
+                    text = "${index + 1} / 100", // 문제 번호
                     fontSize = 18.sp,
                     color = Color.Black,
                     modifier = Modifier.padding(horizontal = 16.dp),
