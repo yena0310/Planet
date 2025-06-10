@@ -1,5 +1,6 @@
 package com.example.planet.ui
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,6 +42,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.R
+import com.example.planet.utils.RankingUtils
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun HomeScreen(navController: NavHostController) {
@@ -44,6 +53,66 @@ fun HomeScreen(navController: NavHostController) {
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
     val iconTint = Color(0xFF546A6E)
 
+    // Firebase
+    val auth = FirebaseAuth.getInstance()
+    val currentUser = auth.currentUser
+    val db = FirebaseFirestore.getInstance()
+
+    // 사용자 정보 상태
+    var userName by remember { mutableStateOf("로딩중...") }
+    var userScore by remember { mutableStateOf(0) }
+    var lastQuestionIndex by remember { mutableStateOf(1) }
+    var myRanking by remember { mutableStateOf(0) }
+    var schoolRanking by remember { mutableStateOf(0) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    // 사용자 정보 가져오기
+    LaunchedEffect(Unit) {
+        Log.d("HomeScreen", "사용자 정보 로드 시작")
+        currentUser?.let { user ->
+            Log.d("HomeScreen", "사용자 UID: ${user.uid}")
+
+            db.collection("users").document(user.uid).get()
+                .addOnSuccessListener { userDoc ->
+                    Log.d("HomeScreen", "사용자 문서 존재: ${userDoc.exists()}")
+                    if (userDoc.exists()) {
+                        Log.d("HomeScreen", "사용자 문서 데이터: ${userDoc.data}")
+
+                        // 사용자 기본 정보
+                        userName = userDoc.getString("name") ?: "이름 없음"
+                        userScore = userDoc.getLong("score")?.toInt() ?: 0
+                        lastQuestionIndex = userDoc.getLong("lastQuestionIndex")?.toInt() ?: 1
+                        myRanking = userDoc.getLong("ranking")?.toInt() ?: 0
+
+                        Log.d("HomeScreen", "사용자 정보 - 이름: $userName, 점수: $userScore, 마지막문제: $lastQuestionIndex, 랭킹: $myRanking")
+
+                        // 학교 랭킹 계산 (같은 학교 내에서의 순위)
+                        val schoolName = userDoc.getString("schoolName")
+                        if (schoolName != null) {
+                            RankingUtils.calculateSchoolRanking(db, schoolName, userScore) { ranking ->
+                                schoolRanking = ranking
+                                Log.d("HomeScreen", "학교 랭킹: $ranking")
+                            }
+                        }
+
+                        isLoading = false
+                    } else {
+                        Log.w("HomeScreen", "사용자 문서 없음")
+                        userName = "정보 없음"
+                        isLoading = false
+                    }
+                }
+                .addOnFailureListener { e ->
+                    Log.e("HomeScreen", "사용자 정보 로드 실패", e)
+                    userName = "로드 실패"
+                    isLoading = false
+                }
+        } ?: run {
+            Log.w("HomeScreen", "로그인되지 않은 사용자")
+            userName = "로그인 필요"
+            isLoading = false
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -53,7 +122,6 @@ fun HomeScreen(navController: NavHostController) {
                 start = 20.dp,
                 end = 20.dp,
                 top = 70.dp
-                //bottom = innerPadding.calculateBottomPadding()
             )
     ) {
 
@@ -64,13 +132,13 @@ fun HomeScreen(navController: NavHostController) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "🌞 연속 7일 출석하고 있어요!",
+                text = if (isLoading) "로딩중..." else "🌞 안녕하세요, ${userName}님!",
                 style = MaterialTheme.typography.bodyLarge,
-                fontSize = 12.sp,
+                fontSize = 14.sp,
                 fontFamily = pretendardsemibold
             )
             Text(
-                text = "89 P",
+                text = "${userScore} P",
                 fontSize = 14.sp,
                 color = Color.Black,
                 fontFamily = pretendardsemibold
@@ -79,7 +147,7 @@ fun HomeScreen(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ======= 최근 퀴즈 박스 (버튼 + 그림자 + TODO 이동) =======
+        // ======= 최근 퀴즈 박스 =======
         Surface(
             tonalElevation = 8.dp,
             shadowElevation = 8.dp,
@@ -90,7 +158,9 @@ fun HomeScreen(navController: NavHostController) {
                 .height(80.dp)
                 .customShadow()
                 .clickable {
-                    navController.navigate("matching_quiz")//("quiz_question/0")
+                    // 마지막 문제 인덱스에 따라 다른 페이지로 이동
+                    val nextQuestionIndex = if (lastQuestionIndex <= 1) 0 else lastQuestionIndex - 1
+                    navController.navigate("quiz_question/$nextQuestionIndex")
                 }
         ) {
             Column(
@@ -116,7 +186,9 @@ fun HomeScreen(navController: NavHostController) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "첫 문제를 풀어보세요 !", // TODO: 히스토리 확인해서 최근 문제 또는 첫 문제로 멘트 변경
+                            text = if (isLoading) "로딩중..."
+                            else if (lastQuestionIndex <= 1) "첫 문제를 풀어보세요 !"
+                            else "${lastQuestionIndex}번 문제부터 계속하기",
                             color = Color(0xFF546A6E),
                             fontSize = 16.64.sp,
                             style = MaterialTheme.typography.titleMedium,
@@ -137,7 +209,7 @@ fun HomeScreen(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ======= 순위 박스 (그림자 + 텍스트 색상 수정 + 구분선 추가) =======
+        // ======= 순위 박스 =======
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
             shape = RoundedCornerShape(20.dp),
@@ -161,7 +233,9 @@ fun HomeScreen(navController: NavHostController) {
                         color = Color(0xFF284449)
                     )
                     Text(
-                        text = "# 1",
+                        text = if (isLoading) "로딩중"
+                        else if (myRanking > 0) "# $myRanking"
+                        else "순위 없음",
                         fontSize = 15.sp,
                         style = MaterialTheme.typography.titleLarge,
                         fontFamily = pretendardbold,
@@ -169,24 +243,26 @@ fun HomeScreen(navController: NavHostController) {
                     )
                 }
 
-                // 👉 중앙 세로 구분선
+                // 중앙 세로 구분선
                 Box(
                     modifier = Modifier
-                        .width(1.dp)               // 세로선이므로 width는 얇게
-                        .height(30.dp)             // 높이는 원하는 만큼
+                        .width(1.dp)
+                        .height(30.dp)
                         .background(Color.LightGray)
                 )
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "학교 점수",
+                        text = "학교 순위",
                         fontSize = 13.sp,
                         style = MaterialTheme.typography.bodyMedium,
                         fontFamily = pretendardbold,
                         color = Color(0xFF284449)
                     )
                     Text(
-                        text = "# 5",
+                        text = if (isLoading) "로딩중"
+                        else if (schoolRanking > 0) "# $schoolRanking"
+                        else "순위 없음",
                         fontSize = 15.sp,
                         style = MaterialTheme.typography.titleLarge,
                         fontFamily = pretendardbold,
@@ -205,7 +281,7 @@ fun HomeScreen(navController: NavHostController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .customShadow()
-                .height(IntrinsicSize.Min), // 높이 고정보다는 콘텐츠에 맞게
+                .height(IntrinsicSize.Min),
         ) {
             Column(
                 modifier = Modifier
@@ -231,7 +307,7 @@ fun HomeScreen(navController: NavHostController) {
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center, // 버튼들 전체 중앙 정렬
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(

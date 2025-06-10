@@ -48,6 +48,7 @@ import androidx.navigation.NavHostController
 import com.example.planet.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 
 @Composable
 fun Mypage(navController: NavHostController) {
@@ -59,6 +60,11 @@ fun Mypage(navController: NavHostController) {
     // 사용자 정보 상태
     var userName by remember { mutableStateOf("로딩중...") }
     var schoolInfo by remember { mutableStateOf("로딩중...") }
+    var myRanking by remember { mutableStateOf(0) }
+    var schoolRanking by remember { mutableStateOf(0) }
+    var solvedQuestions by remember { mutableStateOf(0) }
+    var lastQuestionIndex by remember { mutableStateOf(1) }
+    var userScore by remember { mutableStateOf(0) } // 🆕 사용자 점수 추가
     var isLoading by remember { mutableStateOf(true) }
 
     // 사용자 정보 가져오기
@@ -73,10 +79,16 @@ fun Mypage(navController: NavHostController) {
                     if (userDoc.exists()) {
                         Log.d("Mypage", "사용자 문서 데이터: ${userDoc.data}")
 
-                        // 사용자 이름 설정
+                        // 사용자 기본 정보
                         val name = userDoc.getString("name") ?: "이름 없음"
                         userName = name
-                        Log.d("Mypage", "사용자 이름: $name")
+                        myRanking = userDoc.getLong("ranking")?.toInt() ?: 0
+                        lastQuestionIndex = userDoc.getLong("lastQuestionIndex")?.toInt() ?: 1
+
+                        // 문제 수 계산 (인덱스 기반)
+                        solvedQuestions = if (lastQuestionIndex > 1) lastQuestionIndex - 1 else 0
+
+                        Log.d("Mypage", "사용자 기본 정보 - 이름: $name, 등수: $myRanking, 풀은문제: $solvedQuestions")
 
                         // 학교 정보 가져오기 (직접 저장된 정보 우선 사용)
                         val schoolName = userDoc.getString("schoolName")
@@ -86,7 +98,13 @@ fun Mypage(navController: NavHostController) {
                         if (schoolName != null && grade != null && classNum != null) {
                             schoolInfo = "$schoolName\n${grade}학년 ${classNum}반"
                             Log.d("Mypage", "학교 정보 (직접): $schoolInfo")
-                            isLoading = false
+
+                            // 학교 랭킹 계산
+                            calculateMypageSchoolRanking(db, schoolName, userDoc.getLong("score")?.toInt() ?: 0) { ranking ->
+                                schoolRanking = ranking
+                                isLoading = false
+                                Log.d("Mypage", "학교 랭킹: $ranking")
+                            }
                         } else {
                             Log.d("Mypage", "직접 저장된 정보 없음, 참조 방식으로 시도")
                             // 참조 방식으로 학교 정보 가져오기
@@ -110,15 +128,22 @@ fun Mypage(navController: NavHostController) {
                                                     if (gradeFromClass != null && classNumFromClass != null) {
                                                         schoolInfo = "$schoolNameFromRef\n${gradeFromClass}학년 ${classNumFromClass}반"
                                                         Log.d("Mypage", "학교 정보 (참조): $schoolInfo")
+
+                                                        // 학교 랭킹 계산
+                                                        calculateMypageSchoolRanking(db, schoolNameFromRef, userDoc.getLong("score")?.toInt() ?: 0) { ranking ->
+                                                            schoolRanking = ranking
+                                                            isLoading = false
+                                                        }
                                                     } else {
                                                         schoolInfo = "학교 정보 불완전"
                                                         Log.w("Mypage", "반 정보 불완전")
+                                                        isLoading = false
                                                     }
                                                 } else {
                                                     schoolInfo = "학교 정보 없음"
                                                     Log.w("Mypage", "학교 문서 없음")
+                                                    isLoading = false
                                                 }
-                                                isLoading = false
                                             }
                                             ?.addOnFailureListener { e ->
                                                 schoolInfo = "학교 정보 로드 실패"
@@ -194,7 +219,7 @@ fun Mypage(navController: NavHostController) {
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // 랭킹 박스 (하드코딩 유지)
+                    // 랭킹 박스 (실제 데이터 연동)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -206,7 +231,9 @@ fun Mypage(navController: NavHostController) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "내 등수\n#1",
+                            text = if (isLoading) "로딩중..."
+                            else if (myRanking > 0) "내 등수\n#$myRanking"
+                            else "내 등수\n순위 없음",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF343434),
@@ -220,7 +247,9 @@ fun Mypage(navController: NavHostController) {
                                 .background(Color(0xFF0C092A).copy(alpha = 0.3f))
                         )
                         Text(
-                            "학급 등수\n#5",
+                            text = if (isLoading) "로딩중..."
+                            else if (schoolRanking > 0) "학교 등수\n#$schoolRanking"
+                            else "학교 등수\n순위 없음",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             lineHeight = 15.sp,
@@ -231,7 +260,7 @@ fun Mypage(navController: NavHostController) {
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // 퀴즈 박스 (하드코딩 유지)
+                    // 퀴즈 박스 (실제 데이터 연동)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -245,7 +274,7 @@ fun Mypage(navController: NavHostController) {
                             buildAnnotatedString {
                                 append("지금까지 총 ")
                                 withStyle(style = SpanStyle(color = Color(0xFF259CB2))) {
-                                    append("75문제")
+                                    append(if (isLoading) "로딩중" else "${solvedQuestions}문제")
                                 }
                                 append("를 풀었어요!")
                             },
@@ -255,27 +284,41 @@ fun Mypage(navController: NavHostController) {
 
                         Spacer(modifier = Modifier.height(15.dp))
 
+                        val totalQuestions = 400 // 80 * 5 챕터
+                        val progress = if (totalQuestions > 0) solvedQuestions.toFloat() / totalQuestions else 0f
+
                         Box(
                             modifier = Modifier.size(140.dp),
                             contentAlignment = Alignment.Center
                         ) {
+                            // 배경 원
                             CircularProgressIndicator(
                                 progress = { 1f },
                                 modifier = Modifier.fillMaxSize(),
                                 color = Color.White,
                                 strokeWidth = 10.dp
                             )
+                            // 진행도 원
                             CircularProgressIndicator(
-                                progress = { 0.75f },
+                                progress = { progress },
                                 modifier = Modifier.fillMaxSize(),
                                 color = Color(0xFF28B6CC),
                                 strokeWidth = 10.dp
                             )
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Row(verticalAlignment = Alignment.Bottom) {
-                                    Text("75", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0A0A32))
+                                    Text(
+                                        text = if (isLoading) "로딩" else "$solvedQuestions",
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF0A0A32)
+                                    )
                                     Spacer(modifier = Modifier.width(2.dp))
-                                    Text("/100", fontSize = 16.sp, color = Color(0x8028B6CC))
+                                    Text(
+                                        text = "/$totalQuestions",
+                                        fontSize = 16.sp,
+                                        color = Color(0x8028B6CC)
+                                    )
                                 }
                                 Text("quiz played", fontSize = 12.sp, color = Color.Gray)
                             }
@@ -343,4 +386,29 @@ fun Mypage(navController: NavHostController) {
             tint = Color.Gray
         )
     }
+}
+
+// 🆕 학교 내 순위 계산 함수 (Mypage용)
+fun calculateMypageSchoolRanking(
+    db: FirebaseFirestore,
+    schoolName: String,
+    userScore: Int,
+    onResult: (Int) -> Unit
+) {
+    Log.d("Mypage", "학교 랭킹 계산 시작 - 학교: $schoolName, 점수: $userScore")
+
+    db.collection("users")
+        .whereEqualTo("schoolName", schoolName)
+        .whereGreaterThan("score", userScore)
+        .get()
+        .addOnSuccessListener { documents ->
+            val higherScoreCount = documents.size()
+            val ranking = higherScoreCount + 1
+            Log.d("Mypage", "학교 랭킹 계산 완료 - 더 높은 점수 사용자: $higherScoreCount 명, 내 순위: $ranking")
+            onResult(ranking)
+        }
+        .addOnFailureListener { e ->
+            Log.e("Mypage", "학교 랭킹 계산 실패", e)
+            onResult(0) // 실패 시 0 반환
+        }
 }

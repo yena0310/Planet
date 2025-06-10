@@ -2,6 +2,7 @@ package com.example.planet.ui
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,8 +33,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,13 +48,63 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.R
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 @SuppressLint("SuspiciousIndentation")
-@Composable//-->메인퀴즈페이지
+@Composable
 fun StudyQuizPage(navController: NavHostController) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val pretendardbold = FontFamily(Font(R.font.pretendardbold))
     val context = LocalContext.current
+
+    // Firebase
+    val auth = FirebaseAuth.getInstance()
+    val currentUser = auth.currentUser
+    val db = FirebaseFirestore.getInstance()
+
+    // 사용자 정보 상태
+    var userName by remember { mutableStateOf("로딩중...") }
+    var userScore by remember { mutableStateOf(0) }
+    var lastQuestionIndex by remember { mutableStateOf(1) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    // 사용자 정보 가져오기
+    LaunchedEffect(Unit) {
+        Log.d("StudyQuizPage", "사용자 정보 로드 시작")
+        currentUser?.let { user ->
+            Log.d("StudyQuizPage", "사용자 UID: ${user.uid}")
+
+            db.collection("users").document(user.uid).get()
+                .addOnSuccessListener { userDoc ->
+                    Log.d("StudyQuizPage", "사용자 문서 존재: ${userDoc.exists()}")
+                    if (userDoc.exists()) {
+                        Log.d("StudyQuizPage", "사용자 문서 데이터: ${userDoc.data}")
+
+                        userName = userDoc.getString("name") ?: "이름 없음"
+                        userScore = userDoc.getLong("score")?.toInt() ?: 0
+                        lastQuestionIndex = userDoc.getLong("lastQuestionIndex")?.toInt() ?: 1
+
+                        Log.d("StudyQuizPage", "사용자 정보 - 이름: $userName, 점수: $userScore, 마지막문제: $lastQuestionIndex")
+                        isLoading = false
+                    } else {
+                        Log.w("StudyQuizPage", "사용자 문서 없음")
+                        userName = "정보 없음"
+                        isLoading = false
+                    }
+                }
+                .addOnFailureListener { e ->
+                    Log.e("StudyQuizPage", "사용자 정보 로드 실패", e)
+                    userName = "로드 실패"
+                    isLoading = false
+                }
+        } ?: run {
+            Log.w("StudyQuizPage", "로그인되지 않은 사용자")
+            userName = "로그인 필요"
+            isLoading = false
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -59,7 +113,6 @@ fun StudyQuizPage(navController: NavHostController) {
                 start = 20.dp,
                 end = 20.dp,
                 top = 70.dp
-                //bottom = innerPadding.calculateBottomPadding()
             )
     ) {
 
@@ -70,13 +123,13 @@ fun StudyQuizPage(navController: NavHostController) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "🌞 연속 7일 출석하고 있어요!",
+                text = if (isLoading) "로딩중..." else "🌞 안녕하세요, ${userName}님!",
                 style = MaterialTheme.typography.bodyLarge,
                 fontSize = 14.sp,
                 fontFamily = pretendardsemibold
             )
             Text(
-                text = "89 P",
+                text = "${userScore} P",
                 fontSize = 14.sp,
                 color = Color.Black,
                 fontFamily = pretendardsemibold
@@ -85,7 +138,7 @@ fun StudyQuizPage(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ======= 최근 퀴즈 박스 (버튼 + 그림자 + TODO 이동) =======
+        // ======= 최근 퀴즈 박스 =======
         Surface(
             tonalElevation = 8.dp,
             shadowElevation = 8.dp,
@@ -96,10 +149,9 @@ fun StudyQuizPage(navController: NavHostController) {
                 .height(80.dp)
                 .customShadow()
                 .clickable {
-                    val sharedPref =
-                        context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
-                    val lastIndex = sharedPref.getInt("last_index", 0)
-                    navController.navigate("quiz_question/$lastIndex")
+                    // 다음 문제 인덱스 계산 (1부터 시작하므로 -1)
+                    val nextIndex = if (lastQuestionIndex <= 1) 0 else lastQuestionIndex - 1
+                    navController.navigate("quiz_question/$nextIndex")
                 }
         ) {
             Column(
@@ -125,7 +177,9 @@ fun StudyQuizPage(navController: NavHostController) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "이어서 문제를 풀어보세요 !", // TODO: 히스토리 확인해서 최근 문제 또는 첫 문제로 멘트 변경
+                            text = if (isLoading) "로딩중..."
+                            else if (lastQuestionIndex <= 1) "첫 문제를 풀어보세요 !"
+                            else "${lastQuestionIndex}번 문제부터 계속하기",
                             color = Color(0xFF546A6E),
                             fontSize = 16.64.sp,
                             style = MaterialTheme.typography.titleMedium,
@@ -149,7 +203,6 @@ fun StudyQuizPage(navController: NavHostController) {
         Card(
             colors = CardDefaults.cardColors(containerColor = Color.White),
             shape = RoundedCornerShape(20.dp),
-            //elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(60.dp)
@@ -190,48 +243,76 @@ fun StudyQuizPage(navController: NavHostController) {
                     color = Color.White,
                     shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
                 )
-
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState()) // ← 스크롤 적용
+                    .verticalScroll(rememberScrollState())
                     .padding(24.dp)
             ) {
                 Text(
                     text = "Study Quizzes",
                     fontSize = 20.sp,
                     fontFamily = pretendardbold,
-                    color = Color(0xFF546A6E) // 변경된 제목 색상
+                    color = Color(0xFF546A6E)
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
                 val selectedChapterIndex = remember { mutableStateOf(0) }
 
-                listOf(
-                    Triple("1", "Chapter 1", "20 문제 | 완료!"),
-                    Triple("2", "Chapter 2", "20 문제"),
-                    Triple("3", "Chapter 3", "20 문제"),
-                    Triple("4", "Chapter 4", "20 문제"),
-                    Triple("5", "Chapter 5", "20 문제")
-                ).forEachIndexed { index, (number, title, subtitle) ->
+                // 🆕 챕터 정보 계산
+                val chapters = listOf(
+                    Triple("1", "Chapter 1", 80),
+                    Triple("2", "Chapter 2", 80),
+                    Triple("3", "Chapter 3", 80),
+                    Triple("4", "Chapter 4", 80),
+                    Triple("5", "Chapter 5", 80)
+                )
 
-                    val isSelected = selectedChapterIndex.value == index
+                chapters.forEachIndexed { index, (number, title, totalQuestions) ->
+                    // 챕터별 시작 인덱스 계산 (0부터 시작)
+                    val chapterStartIndex = index * totalQuestions
+                    val chapterEndIndex = chapterStartIndex + totalQuestions - 1
 
-                    val backgroundColor = if (isSelected) Color(0xFF4E4E58) else Color.White
-                    val borderColor = if (isSelected) Color.Transparent else Color(0xFFB9DEE4)
-                    val titleColor = if (isSelected) Color(0xFFC2EFF7) else Color(0xFF546A6E)
-                    val subtitleColor = if (isSelected) Color(0xFF95D0DB) else Color(0xFF858494)
-                    val context = LocalContext.current
-                    val sharedPref = context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
+                    // 완료 여부 확인 (마지막 문제 인덱스가 챕터 끝을 넘었는지)
+                    val isCompleted = !isLoading && lastQuestionIndex > chapterEndIndex + 1
+
+                    // 현재 진행 중인 챕터인지 확인
+                    val isCurrentChapter = !isLoading &&
+                            lastQuestionIndex > chapterStartIndex &&
+                            lastQuestionIndex <= chapterEndIndex + 1
+
+                    // 해당 챕터에서 몇 문제 완료했는지 계산
+                    val completedInChapter = when {
+                        isCompleted -> totalQuestions
+                        isCurrentChapter -> (lastQuestionIndex - 1) - chapterStartIndex
+                        else -> 0
+                    }
+
+                    val subtitle = when {
+                        isLoading -> "로딩중..."
+                        isCompleted -> "$totalQuestions 문제 | 완료!"
+                        isCurrentChapter -> "$totalQuestions 문제 | ${completedInChapter}/$totalQuestions"
+                        else -> "$totalQuestions 문제"
+                    }
+
+                    val backgroundColor = if (isCompleted) Color(0xFF4E4E58) else Color.White
+                    val borderColor = if (isCompleted) Color.Transparent else Color(0xFFB9DEE4)
+                    val titleColor = if (isCompleted) Color(0xFFC2EFF7) else Color(0xFF546A6E)
+                    val subtitleColor = if (isCompleted) Color(0xFF95D0DB) else Color(0xFF858494)
+
                     Button(
                         onClick = {
-                            val startIndex = if (number == "1") {
-                                sharedPref.getInt("last_index", 0)
-                            } else {
-                                0
+                            val startIndex = when {
+                                // 완료된 챕터면 해당 챕터 첫 문제로
+                                isCompleted -> chapterStartIndex
+                                // 현재 진행 중인 챕터면 마지막 문제 인덱스로
+                                isCurrentChapter -> lastQuestionIndex - 1
+                                // 아직 시작하지 않은 챕터면 해당 챕터 첫 문제로
+                                else -> chapterStartIndex
                             }
+                            Log.d("StudyQuizPage", "챕터 $number 클릭 - startIndex: $startIndex")
                             navController.navigate("quiz_question/$startIndex")
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
@@ -297,7 +378,8 @@ fun StudyQuizPage(navController: NavHostController) {
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                }}
+                }
+            }
         }
     }
 }
