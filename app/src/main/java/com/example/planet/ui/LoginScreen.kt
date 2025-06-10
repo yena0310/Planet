@@ -235,7 +235,6 @@ fun LoginScreen(navController: NavHostController) {
                 Spacer(modifier = Modifier.height(100.dp))
 
                 // 로그인 버튼
-                // 로그인 버튼
                 Button(
                     onClick = {
                         if (isLoading) return@Button
@@ -396,6 +395,8 @@ fun createUserInFirestore(
                                             "score" to 0,
                                             "ranking" to 0,
                                             "profilePhotoPath" to "",
+                                            // 🆕 최근에 푼 문제 인덱스 추가 (1부터 시작)
+                                            "lastQuestionIndex" to 1,
                                             // WelcomeScreen에서 사용할 추가 정보
                                             "schoolName" to schoolName,
                                             "grade" to grade,
@@ -405,7 +406,7 @@ fun createUserInFirestore(
                                         Log.d("CreateUser", "사용자 데이터 저장 시작: $userData")
                                         db.collection("users").document(userId).set(userData)
                                             .addOnSuccessListener {
-                                                Log.d("CreateUser", "✅ 유저 저장 성공")
+                                                Log.d("CreateUser", "✅ 유저 저장 성공 (lastQuestionIndex: 0으로 초기화)")
                                                 onSuccess()
                                             }
                                             .addOnFailureListener { e ->
