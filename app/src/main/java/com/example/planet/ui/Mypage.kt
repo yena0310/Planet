@@ -1,6 +1,8 @@
 package com.example.planet.ui
 
+import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +26,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,10 +46,117 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.R
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun Mypage(navController: NavHostController) {
     val pretendardBold = FontFamily(Font(R.font.pretendardbold))
+    val auth = FirebaseAuth.getInstance()
+    val currentUser = auth.currentUser
+    val db = FirebaseFirestore.getInstance()
+
+    // 사용자 정보 상태
+    var userName by remember { mutableStateOf("로딩중...") }
+    var schoolInfo by remember { mutableStateOf("로딩중...") }
+    var isLoading by remember { mutableStateOf(true) }
+
+    // 사용자 정보 가져오기
+    LaunchedEffect(Unit) {
+        Log.d("Mypage", "사용자 정보 로드 시작")
+        currentUser?.let { user ->
+            Log.d("Mypage", "사용자 UID: ${user.uid}")
+
+            db.collection("users").document(user.uid).get()
+                .addOnSuccessListener { userDoc ->
+                    Log.d("Mypage", "사용자 문서 존재: ${userDoc.exists()}")
+                    if (userDoc.exists()) {
+                        Log.d("Mypage", "사용자 문서 데이터: ${userDoc.data}")
+
+                        // 사용자 이름 설정
+                        val name = userDoc.getString("name") ?: "이름 없음"
+                        userName = name
+                        Log.d("Mypage", "사용자 이름: $name")
+
+                        // 학교 정보 가져오기 (직접 저장된 정보 우선 사용)
+                        val schoolName = userDoc.getString("schoolName")
+                        val grade = userDoc.getLong("grade")?.toInt()
+                        val classNum = userDoc.getLong("classNum")?.toInt()
+
+                        if (schoolName != null && grade != null && classNum != null) {
+                            schoolInfo = "$schoolName\n${grade}학년 ${classNum}반"
+                            Log.d("Mypage", "학교 정보 (직접): $schoolInfo")
+                            isLoading = false
+                        } else {
+                            Log.d("Mypage", "직접 저장된 정보 없음, 참조 방식으로 시도")
+                            // 참조 방식으로 학교 정보 가져오기
+                            val classRef = userDoc.getDocumentReference("classId")
+                            classRef?.get()
+                                ?.addOnSuccessListener { classDoc ->
+                                    Log.d("Mypage", "반 문서 존재: ${classDoc.exists()}")
+                                    if (classDoc.exists()) {
+                                        Log.d("Mypage", "반 문서 데이터: ${classDoc.data}")
+
+                                        val gradeFromClass = classDoc.getLong("grade")?.toInt()
+                                        val classNumFromClass = classDoc.getLong("number")?.toInt()
+
+                                        val schoolRef = classDoc.getDocumentReference("schoolId")
+                                        schoolRef?.get()
+                                            ?.addOnSuccessListener { schoolDoc ->
+                                                Log.d("Mypage", "학교 문서 존재: ${schoolDoc.exists()}")
+                                                if (schoolDoc.exists()) {
+                                                    val schoolNameFromRef = schoolDoc.getString("name") ?: "학교명 없음"
+
+                                                    if (gradeFromClass != null && classNumFromClass != null) {
+                                                        schoolInfo = "$schoolNameFromRef\n${gradeFromClass}학년 ${classNumFromClass}반"
+                                                        Log.d("Mypage", "학교 정보 (참조): $schoolInfo")
+                                                    } else {
+                                                        schoolInfo = "학교 정보 불완전"
+                                                        Log.w("Mypage", "반 정보 불완전")
+                                                    }
+                                                } else {
+                                                    schoolInfo = "학교 정보 없음"
+                                                    Log.w("Mypage", "학교 문서 없음")
+                                                }
+                                                isLoading = false
+                                            }
+                                            ?.addOnFailureListener { e ->
+                                                schoolInfo = "학교 정보 로드 실패"
+                                                Log.e("Mypage", "학교 정보 로드 실패", e)
+                                                isLoading = false
+                                            }
+                                    } else {
+                                        schoolInfo = "반 정보 없음"
+                                        Log.w("Mypage", "반 문서 없음")
+                                        isLoading = false
+                                    }
+                                }
+                                ?.addOnFailureListener { e ->
+                                    schoolInfo = "반 정보 로드 실패"
+                                    Log.e("Mypage", "반 정보 로드 실패", e)
+                                    isLoading = false
+                                }
+                        }
+                    } else {
+                        userName = "사용자 정보 없음"
+                        schoolInfo = "학교 정보 없음"
+                        Log.w("Mypage", "사용자 문서 없음")
+                        isLoading = false
+                    }
+                }
+                .addOnFailureListener { e ->
+                    userName = "정보 로드 실패"
+                    schoolInfo = "정보 로드 실패"
+                    Log.e("Mypage", "사용자 정보 로드 실패", e)
+                    isLoading = false
+                }
+        } ?: run {
+            userName = "로그인 필요"
+            schoolInfo = "로그인 필요"
+            Log.w("Mypage", "사용자 없음")
+            isLoading = false
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -68,9 +182,9 @@ fun Mypage(navController: NavHostController) {
                         .padding(horizontal = 24.dp, vertical = 80.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // 학교명 텍스트
+                    // 학교명 텍스트 (Firebase에서 가져온 정보)
                     Text(
-                        text = "한국초등학교\n1학년 1반",
+                        text = schoolInfo,
                         fontSize = 12.sp,
                         fontFamily = pretendardBold,
                         lineHeight = 15.sp,
@@ -80,7 +194,7 @@ fun Mypage(navController: NavHostController) {
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // 랭킹 박스
+                    // 랭킹 박스 (하드코딩 유지)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -92,7 +206,7 @@ fun Mypage(navController: NavHostController) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "내 등수\n#6",
+                            "내 등수\n#1",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF343434),
@@ -106,7 +220,7 @@ fun Mypage(navController: NavHostController) {
                                 .background(Color(0xFF0C092A).copy(alpha = 0.3f))
                         )
                         Text(
-                            "학급 등수\n#14",
+                            "학급 등수\n#5",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             lineHeight = 15.sp,
@@ -117,12 +231,11 @@ fun Mypage(navController: NavHostController) {
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // 퀴즈 박스
+                    // 퀴즈 박스 (하드코딩 유지)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .fillMaxHeight()
-                            //.height(1500.dp)
                             .background(Color(0xFFBCE4EC), RoundedCornerShape(16.dp))
                             .padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -171,7 +284,8 @@ fun Mypage(navController: NavHostController) {
                 }
             }
         }
-        // ✅ 2. 프로필 이미지와 이름 (겹치게 위에 띄움)
+
+        // ✅ 2. 프로필 이미지와 이름 (Firebase에서 가져온 이름)
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -207,7 +321,11 @@ fun Mypage(navController: NavHostController) {
             }
 
             Spacer(modifier = Modifier.height(6.dp))
-            Text("김아무개", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = userName,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         // ✅ 3. 설정 아이콘 (맨 위 고정)
@@ -217,12 +335,12 @@ fun Mypage(navController: NavHostController) {
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = 50.dp, end = 20.dp)
-                .size(28.dp),
+                .size(28.dp)
+                .clickable {
+                    Log.d("Mypage", "설정 버튼 클릭, setting으로 이동")
+                    navController.navigate("setting")
+                },
             tint = Color.Gray
         )
     }
 }
-
-
-
-

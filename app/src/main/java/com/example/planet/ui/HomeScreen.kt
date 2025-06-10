@@ -161,7 +161,7 @@ fun HomeScreen(navController: NavHostController) {
                         color = Color(0xFF284449)
                     )
                     Text(
-                        text = "# 6",
+                        text = "# 1",
                         fontSize = 15.sp,
                         style = MaterialTheme.typography.titleLarge,
                         fontFamily = pretendardbold,
@@ -186,7 +186,7 @@ fun HomeScreen(navController: NavHostController) {
                         color = Color(0xFF284449)
                     )
                     Text(
-                        text = "# 14",
+                        text = "# 5",
                         fontSize = 15.sp,
                         style = MaterialTheme.typography.titleLarge,
                         fontFamily = pretendardbold,

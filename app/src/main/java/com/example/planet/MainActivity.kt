@@ -63,6 +63,7 @@ import java.nio.ByteBuffer
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import android.graphics.Matrix
+import com.example.planet.ui.SettingScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -125,6 +126,7 @@ class MainActivity : ComponentActivity() {
                             composable("quiz") { StudyQuizPage(navController) }
                             composable("rank") { LeaderboardScreen(navController) }
                             composable("mypage") { Mypage(navController) }
+                            composable("setting") { SettingScreen(navController) }
                             composable("camera") { CameraScreen(navController, this@MainActivity) }
                             composable("recycle_sign_guide") { RecycleSignGuide(navController, guideText = labelGuideText) }
                             composable("waste_guide") { GuideResultScreen(navController, guideText = wasteGuideText) }
