@@ -1,0 +1,142 @@
+{
+  "quiz1_q1": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "종이팩은 일반 종이류와\n함께 배출한다.",
+    "answer": "X",
+    "explanation": "종이팩은 일반 종이류가 아닌, 전용 수거함에\n배출해야 합니다."
+  },
+  "quiz1_q2": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "플라스틱 병은 라벨을\n제거하고 배출해야 한다.",
+    "answer": "O",
+    "explanation": "플라스틱 병은 라벨을 제거하고\n헹군 후 배출해야 합니다."
+  },
+  "quiz1_q3": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "스티로폼은\n재활용이 불가능하다.",
+    "answer": "X",
+    "explanation": "스티로폼은 재활용이 가능하나,\n이물질을 제거해야 합니다."
+  },
+  "quiz1_q4": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "종이컵은 일반 쓰레기로\n버린다.",
+    "answer": "O",
+    "explanation": "음료가 묻은 종이컵은\n일반 쓰레기로 처리합니다."
+  },
+  "quiz1_q5": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "배터리는 일반 쓰레기로\n배출해도 된다.",
+    "answer": "X",
+    "explanation": "배터리는 전용 폐건전지\n수거함에 배출해야 합니다."
+  },
+  "quiz1_q6": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "플라스틱 병의 라벨은\n재질이 달라도 그대로 배출해도 된다.",
+    "answer": "X",
+    "explanation": "재활용 품질 향상을 위해\n라벨은 반드시 제거해야 합니다."
+  },
+  "quiz1_q7": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "음식물 쓰레기는\n물기를 제거한 후 배출해야 한다.",
+    "answer": "O",
+    "explanation": "물기가 많으면 처리 비용이 증가하므로,\n충분히 물기를 제거해야 합니다."
+  },
+  "quiz1_q8": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "페트병은\n내용물을 비우지 않아도 된다.",
+    "answer": "X",
+    "explanation": "페트병은 내용물을 비우고\n깨끗이 헹군 후 배출해야 합니다."
+  },
+  "quiz1_q9": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "플라스틱 포장재는\n재질이 다르면 함께 배출해도 된다.",
+    "answer": "X",
+    "explanation": "다른 재질은 각각 분리하여\n배출해야 재활용됩니다."
+  },
+  "quiz1_q10": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "맥주캔은\n씻지 않아도 재활용이 가능하다.",
+    "answer": "X",
+    "explanation": "내용물을 비우고\n깨끗이 헹군 후 배출해야 합니다."
+  },
+  "quiz1_q11": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "비닐은\n깨끗한 경우만 재활용된다.",
+    "answer": "O",
+    "explanation": "기름이나 이물질이 묻은 비닐은\n재활용이 어려워 일반쓰레기로 처리됩니다."
+  },
+  "quiz1_q12": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "유리는\n색깔에 따라 분리하지 않아도 된다.",
+    "answer": "O",
+    "explanation": "유리는 색상별로 자동 분류되므로\n색깔 구분 없이 배출해도 됩니다."
+  },
+  "quiz1_q13": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "종이류는\n테이프를 제거하고 배출해야 한다.",
+    "answer": "O",
+    "explanation": "포장 테이프나 스티커 등 이물질은\n재활용을 방해하므로 제거해야 합니다."
+  },
+  "quiz1_q14": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "우유 팩은\n깨끗이 씻어 건조한 후 배출한다.",
+    "answer": "O",
+    "explanation": "우유팩은 깨끗이 씻고 말려야\n재활용이 가능합니다."
+  },
+  "quiz1_q15": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "아이스팩은\n물에 녹여 버려야 한다.",
+    "answer": "X",
+    "explanation": "내용물은 폐기물로 처리해야 하며,\n일부 지자체는 재활용 수거함 운영 중입니다."
+  },
+  "quiz1_q16": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "건전지는\n종이봉투에 넣어 배출해도 된다.",
+    "answer": "X",
+    "explanation": "건전지는 전용 수거함에\n별도 배출해야 합니다."
+  },
+  "quiz1_q17": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "종이 상자는\n펼쳐서 배출하는 것이 좋다.",
+    "answer": "O",
+    "explanation": "부피를 줄이고 분리 수거 효율을 높이기 위해\n펼쳐서 배출하는 것이 좋습니다."
+  },
+  "quiz1_q18": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "라이터는\n재활용품으로 분리배출한다.",
+    "answer": "X",
+    "explanation": "라이터는 내용물 잔존 가능성이 있어\n일반쓰레기로 배출해야 합니다."
+  },
+  "quiz1_q19": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "이물질이 묻은 플라스틱은\n재활용이 어렵다.",
+    "answer": "O",
+    "explanation": "이물질이 있으면 재활용 품질이 저하되어\n일반쓰레기로 처리될 수 있습니다."
+  },
+  "quiz1_q20": {
+    "chapter": 1,
+    "type": "OX",
+    "question": "샴푸 용기는\n헹군 후 플라스틱으로 배출해야 한다.",
+    "answer": "O",
+    "explanation": "용기 안을 깨끗이 헹군 뒤\n라벨을 제거해 배출해야 재활용됩니다."
+  }
+}

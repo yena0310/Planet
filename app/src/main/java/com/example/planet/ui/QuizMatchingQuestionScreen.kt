@@ -2,8 +2,6 @@ package com.example.planet.ui
 
 import android.content.Context
 import android.util.Log
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,16 +33,18 @@ import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
 import com.example.planet.QuizItem
 import com.example.planet.R
-import com.example.planet.chapter3Quizzes
+import com.example.planet.data.UserQuizRepository
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 
 @Composable
-fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem, index: Int) {
+fun QuizMatchingQuestionScreen(navController: NavHostController, quizList: List<QuizItem>, index: Int) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
-    val quizzes = chapter3Quizzes
 
-    val questions = quizzes.map { it.question }
-    val answers = quizzes.map { it.correctAnswer }
+    val quiz = quizList[index]
+
+    val questions = quizList.map { it.question }
+    val answers = quizList.map { it.correctAnswer }
 
     var selectedQuestion by remember { mutableStateOf<String?>(null) }
     val matchedPairs = remember { mutableStateListOf<Pair<String, String>>() }
@@ -56,6 +56,10 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
 
     val lineOffsetX = with(LocalDensity.current) { 12.dp.toPx() } // 원하는 만큼 조절
     LaunchedEffect(Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        if (userId != null) {
+            UserQuizRepository.updateLastQuestionIndex(userId, index)
+        }
         context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
             .edit()
             .putInt("last_index", index)
@@ -119,7 +123,7 @@ fun QuizMatchingQuestionScreen(navController: NavHostController, quiz: QuizItem,
                         )
                     }
                     Text(
-                        text = "${index + 1} / 20",
+                        text = "${index + 61} / 100",
                         fontSize = 18.sp,
                         fontFamily = pretendardsemibold
                     )

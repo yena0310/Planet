@@ -25,15 +25,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.example.planet.QuizItem
 import com.example.planet.R
-import com.example.planet.chapter1FullQuizzes
 
 @Composable//-->통합 해설페이지
 fun QuizAnswerScreen(
     navController: NavHostController,
-    quiz: QuizItem,
+    quizList: List<QuizItem>,
     index: Int,
     userAnswer: String?
 ) {
+    val quiz = quizList[index]
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val isCorrect = userAnswer?.trim()?.equals(quiz.correctAnswer.trim(), ignoreCase = true) == true
 
@@ -76,7 +76,7 @@ fun QuizAnswerScreen(
                 }
 
                 Text(
-                    text = "${index + 1} / 20",
+                    text = "${index + 1} / 100",
                     fontSize = 18.sp,
                     color = Color.Black,
                     fontFamily = pretendardsemibold
@@ -109,7 +109,7 @@ fun QuizAnswerScreen(
                     .padding(top = 200.dp, end = 30.dp) // 🔽 위치 조정
                     .clickable {
                         val nextIndex = index + 1
-                        if (nextIndex < chapter1FullQuizzes.size) {
+                        if (nextIndex < quizList.size) {
                             navController.navigate("quiz_question/$nextIndex")
                         } else {
                             navController.navigate("quiz")

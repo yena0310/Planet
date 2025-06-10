@@ -1,0 +1,142 @@
+{
+  "quiz3_q1": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "깨진 유리컵",
+    "answer": "신문지 등에 싸서 일반 쓰레기로 배출",
+    "explanation": "깨진 유리는 안전을 위해 신문지에 싸서 일반 쓰레기로 처리합니다."
+  },
+  "quiz3_q2": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "종이 영수증",
+    "answer": "감열지라서 일반 쓰레기에 배출",
+    "explanation": "감열지는 재활용이 불가능하므로 일반 쓰레기로 처리합니다."
+  },
+  "quiz3_q3": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "유리병 뚜껑",
+    "answer": "병과 분리해서 캔류(금속)로 배출",
+    "explanation": "유리병 뚜껑은 금속이므로 캔류로 분리 배출합니다."
+  },
+  "quiz3_q4": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "우유 팩",
+    "answer": "깨끗이 헹궈 종이팩 전용 수거함에 배출",
+    "explanation": "우유 팩은 전용 수거함에 헹군 후 배출해야 합니다."
+  },
+  "quiz3_q5": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "배터리",
+    "answer": "전용 폐건전지 수거함에 배출",
+    "explanation": "배터리는 전용 폐건전지 수거함에만 배출해야 합니다."
+  },
+  "quiz3_q6": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "기름 묻은 종이",
+    "answer": "오염되었으므로 일반 쓰레기로 배출",
+    "explanation": "기름이 묻은 종이는 재활용이 불가능합니다."
+  },
+  "quiz3_q7": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "스티로폼",
+    "answer": "깨끗하면 재활용, 오염되면 일반 쓰레기로",
+    "explanation": "상태에 따라 재활용 여부가 달라집니다."
+  },
+  "quiz3_q8": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "플라스틱 병",
+    "answer": "라벨 제거 후 세척해서 배출",
+    "explanation": "올바른 재활용을 위해 라벨 제거와 세척이 필요합니다."
+  },
+  "quiz3_q9": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "형광등",
+    "answer": "전용 수거함에 배출",
+    "explanation": "형광등은 깨질 위험이 있어 전용 수거함에 배출합니다."
+  },
+  "quiz3_q10": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "헌 옷",
+    "answer": "의류 수거함에 배출",
+    "explanation": "입을 수 있는 헌 옷은 의류 수거함을 이용합니다."
+  },
+  "quiz3_q11": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "전기밥솥",
+    "answer": "재활용 센터에 맡긴다",
+    "explanation": "전자제품은 재활용 센터에서 처리합니다."
+  },
+  "quiz3_q12": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "일회용 수저",
+    "answer": "일반 쓰레기로 배출",
+    "explanation": "재질이 다양하거나 재활용이 어렵기 때문에 일반 쓰레기입니다."
+  },
+  "quiz3_q13": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "신문지",
+    "answer": "종이류로 재활용",
+    "explanation": "깨끗한 신문지는 종이류로 분류됩니다."
+  },
+  "quiz3_q14": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "유리병",
+    "answer": "세척 후 유리류로 배출",
+    "explanation": "이물질 제거 후 유리로 재활용할 수 있습니다."
+  },
+  "quiz3_q15": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "페트병 뚜껑",
+    "answer": "병과 분리해서 플라스틱으로 배출",
+    "explanation": "뚜껑은 분리해서 플라스틱으로 배출해야 합니다."
+  },
+  "quiz3_q16": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "비닐봉지",
+    "answer": "이물질 제거 후 비닐류로 배출",
+    "explanation": "깨끗한 비닐은 재활용됩니다."
+  },
+  "quiz3_q17": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "휴지",
+    "answer": "재활용 불가, 일반 쓰레기로",
+    "explanation": "오염된 휴지는 재활용할 수 없습니다."
+  },
+  "quiz3_q18": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "캔",
+    "answer": "깨끗이 헹궈 캔류로 배출",
+    "explanation": "캔은 세척 후 캔류로 재활용합니다."
+  },
+  "quiz3_q19": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "라면봉지",
+    "answer": "내용물 제거 후 비닐류로 배출",
+    "explanation": "음식물 제거 후 재활용 가능"
+  },
+  "quiz3_q20": {
+    "chapter": 1,
+    "type": "MATCHING",
+    "question": "계란 껍질",
+    "answer": "음식물 쓰레기로 배출",
+    "explanation": "계란 껍질은 음식물 쓰레기로 분류됩니다."
+  }
+}

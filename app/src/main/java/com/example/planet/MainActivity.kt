@@ -64,6 +64,8 @@ import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import android.graphics.Matrix
 import com.example.planet.ui.SettingScreen
+import com.example.planet.data.QuizRepository
+import com.example.planet.data.QuizUploader
 
 class MainActivity : ComponentActivity() {
 
@@ -85,18 +87,22 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        detector = Yolov8sDetector(this) // "폐기물 분리"
-        labelDetector = LabelDetector(this) // "분리배출 표시"
+        detector = Yolov8sDetector(this)
+        labelDetector = LabelDetector(this)
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         setContent {
             val navController = rememberNavController()
             var showSplash by remember { mutableStateOf(true) }
             val context = LocalContext.current
+            var fullQuizList by remember { mutableStateOf<List<QuizItem>>(emptyList()) }
 
             LaunchedEffect(Unit) {
                 delay(2000)
                 showSplash = false
+                QuizRepository.fetchAllChapter1Quizzes { fetched ->
+                    fullQuizList = fetched
+                }
             }
             MaterialTheme {
                 if (showSplash) {
@@ -126,30 +132,18 @@ class MainActivity : ComponentActivity() {
                             composable("quiz") { StudyQuizPage(navController) }
                             composable("rank") { LeaderboardScreen(navController) }
                             composable("mypage") { Mypage(navController) }
-                            composable("setting") { SettingScreen(navController) }
                             composable("camera") { CameraScreen(navController, this@MainActivity) }
                             composable("recycle_sign_guide") { RecycleSignGuide(navController, guideText = labelGuideText) }
                             composable("waste_guide") { GuideResultScreen(navController, guideText = wasteGuideText) }
-                            composable("study_quiz") { StudyQuizPage(navController) }
-                            // 매칭 퀴즈 경로 등록
-                            composable("matching_quiz") {
-                                QuizMatchingQuestionScreen(
-                                    navController = navController,
-                                    quiz = chapter3Quizzes[0], // 혹은 필요한 index로 설정
-                                    index = 15 // 11번째 문제라면 10
-                                )
-                            }
+
                             composable(
                                 route = "quiz_question/{index}",
                                 arguments = listOf(navArgument("index") { type = NavType.IntType })
                             ) { backStackEntry ->
                                 val index = backStackEntry.arguments?.getInt("index") ?: 0
-                                val quiz = chapter1FullQuizzes.getOrNull(index)
-                                if (quiz != null) {
-                                    QuizQuestionScreen(navController, quiz, index)
-                                }
+                                QuizQuestionScreen(navController, quizList = fullQuizList, index = index)
                             }
-                            // 이미 존재하던 해설 페이지
+
                             composable(
                                 route = "quiz_answer/{index}?userAnswer={userAnswer}",
                                 arguments = listOf(
@@ -163,9 +157,20 @@ class MainActivity : ComponentActivity() {
                             ) { backStackEntry ->
                                 val index = backStackEntry.arguments?.getInt("index") ?: 0
                                 val userAnswer = backStackEntry.arguments?.getString("userAnswer") ?: ""
-                                val quiz = chapter1FullQuizzes.getOrNull(index)
-                                if (quiz != null) {
-                                    QuizAnswerScreen(navController, quiz, index, userAnswer)
+
+                                if (fullQuizList.isNotEmpty()) {
+                                    val quiz = fullQuizList[index]
+                                    if (quiz.type == QuizType.MATCHING) {
+                                        // 매칭형은 전체 리스트 넘기고, 결과 화면에서 매칭 로직 따로 처리할 수도 있음
+                                        navController.navigate("quiz_result") // 매칭형은 해설 화면 없이 결과로 직행하도록 설계 가능
+                                    } else {
+                                        QuizAnswerScreen(
+                                            navController = navController,
+                                            quizList = fullQuizList,
+                                            index = index,
+                                            userAnswer = userAnswer
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -280,12 +285,13 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun QuizQuestionScreen(navController: NavHostController, quiz: QuizItem, index: Int) {
+fun QuizQuestionScreen(navController: NavHostController, quizList: List<QuizItem>, index: Int) {
+    val quiz = quizList.getOrNull(index) ?: return
     when (quiz.type) {
-        QuizType.OX -> QuizOXQuestionScreen(navController, quiz, index)
-        QuizType.SUBJECTIVE -> QuizSubjectiveQuestionScreen(navController, quiz, index)
-        QuizType.MATCHING -> QuizMatchingQuestionScreen(navController, quiz, index)
-        QuizType.MULTIPLE_CHOICE -> QuizMultipleChoiceQuestionScreen(navController, quiz, index)
+        QuizType.OX -> QuizOXQuestionScreen(navController, quizList, index)
+        QuizType.SUBJECTIVE -> QuizSubjectiveQuestionScreen(navController, quizList, index)
+        QuizType.MATCHING -> QuizMatchingQuestionScreen(navController, quizList, index)
+        QuizType.MULTIPLE_CHOICE -> QuizMultipleChoiceQuestionScreen(navController, quizList, index)
     }
 }
 

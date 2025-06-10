@@ -14,7 +14,7 @@ data class QuizItem(
     val choices: List<String>? = null,
     val explanation: String? = null
 )
-
+/*
 // Chapter 1 – OX 퀴즈
 val chapter1Quizzes = listOf(
     QuizItem("quiz1_q1", 1, "종이팩은 일반 종이류와\n함께 배출한다.", QuizType.OX, "X", explanation = "종이팩은 일반 종이류가 아닌, 전용 수거함에\n배출해야 합니다."),
@@ -53,3 +53,4 @@ val chapter4Quizzes = listOf(
 
 // 전체 통합 리스트
 val chapter1FullQuizzes = chapter1Quizzes + chapter2Quizzes + chapter4Quizzes+chapter3Quizzes //일단 매칭형은 뒤로 뺌
+*/

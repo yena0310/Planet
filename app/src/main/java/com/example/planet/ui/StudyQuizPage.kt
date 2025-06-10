@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.R
+import com.example.planet.data.UserQuizRepository
+import com.google.firebase.auth.FirebaseAuth
 
 @SuppressLint("SuspiciousIndentation")
 @Composable//-->메인퀴즈페이지
@@ -96,11 +98,12 @@ fun StudyQuizPage(navController: NavHostController) {
                 .height(80.dp)
                 .customShadow()
                 .clickable {
-                    val sharedPref =
-                        context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
-                    val lastIndex = sharedPref.getInt("last_index", 0)
+                    val userId = FirebaseAuth.getInstance().currentUser?.uid
+                    if (userId != null) {
+                        UserQuizRepository.fetchLastQuestionIndex(userId) { lastIndex ->
+                            val startIndex = lastIndex ?: 0
                     navController.navigate("quiz_question/$lastIndex")
-                }
+                }}}
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
