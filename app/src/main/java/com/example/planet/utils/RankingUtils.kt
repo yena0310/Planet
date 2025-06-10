@@ -10,6 +10,66 @@ import com.google.firebase.firestore.Query
 object RankingUtils {
 
     /**
+     * 마지막 문제 인덱스 업데이트
+     * @param db FirebaseFirestore 인스턴스
+     * @param userId 사용자 ID
+     * @param questionIndex 문제 인덱스
+     * @param onSuccess 성공 콜백
+     * @param onFailure 실패 콜백
+     */
+    fun updateLastQuestionIndex(
+        db: FirebaseFirestore,
+        userId: String,
+        questionIndex: Int,
+        onSuccess: () -> Unit = {},
+        onFailure: (String) -> Unit = {}
+    ) {
+        Log.d("RankingUtils", "lastQuestionIndex 업데이트 - 사용자: $userId, 인덱스: $questionIndex")
+
+        db.collection("users").document(userId)
+            .update("lastQuestionIndex", questionIndex)
+            .addOnSuccessListener {
+                Log.d("RankingUtils", "✅ lastQuestionIndex 업데이트 성공: $questionIndex")
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                Log.e("RankingUtils", "❌ lastQuestionIndex 업데이트 실패", e)
+                onFailure("문제 인덱스 업데이트 실패: ${e.message}")
+            }
+    }
+
+    /**
+     * 사용자 정보 조회 (점수, 문제 수 등)
+     * @param db FirebaseFirestore 인스턴스
+     * @param userId 사용자 ID
+     * @param onResult 결과 콜백 (점수, 총문제수)
+     */
+    fun getUserQuizInfo(
+        db: FirebaseFirestore,
+        userId: String,
+        onResult: (Int, Int) -> Unit
+    ) {
+        Log.d("RankingUtils", "사용자 퀴즈 정보 조회 - ID: $userId")
+
+        db.collection("users").document(userId).get()
+            .addOnSuccessListener { userDoc ->
+                if (userDoc.exists()) {
+                    val score = userDoc.getLong("score")?.toInt() ?: 0
+                    val totalQuestions = 400 // 80 * 5 챕터
+                    Log.d("RankingUtils", "사용자 정보 - 점수: $score, 총문제: $totalQuestions")
+                    onResult(score, totalQuestions)
+                } else {
+                    Log.w("RankingUtils", "사용자 문서 없음")
+                    onResult(0, 400)
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("RankingUtils", "사용자 정보 조회 실패", e)
+                onResult(0, 400)
+            }
+    }
+
+    /**
      * 학교 내 순위 계산 (점수 기준)
      * @param db FirebaseFirestore 인스턴스
      * @param schoolName 학교명
@@ -31,7 +91,7 @@ object RankingUtils {
             .addOnSuccessListener { documents ->
                 val higherScoreCount = documents.size()
                 val ranking = higherScoreCount + 1
-                Log.d("RankingUtils", "학교 랭킹 계산 완료 - 더 높은 점수 사용자: $higherScoreCount 명, 내 순위: $ranking")
+                Log.d("RankingUtils", "학교 랭킹 계산 완료 - 더 높은 점수 사용자: ${higherScoreCount}명, 내 순위: $ranking")
                 onResult(ranking)
             }
             .addOnFailureListener { e ->
@@ -165,7 +225,7 @@ object RankingUtils {
             .addOnSuccessListener { documents ->
                 val higherScoreCount = documents.size()
                 val ranking = higherScoreCount + 1
-                Log.d("RankingUtils", "전교 랭킹 계산 완료 - 더 높은 점수 사용자: $higherScoreCount 명, 내 순위: $ranking")
+                Log.d("RankingUtils", "전교 랭킹 계산 완료 - 더 높은 점수 사용자: ${higherScoreCount}명, 내 순위: $ranking")
                 onResult(ranking)
             }
             .addOnFailureListener { e ->

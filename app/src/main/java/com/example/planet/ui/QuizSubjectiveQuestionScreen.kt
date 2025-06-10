@@ -1,6 +1,7 @@
 package com.example.planet.ui
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,36 +43,66 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.QuizItem
 import com.example.planet.R
-import com.example.planet.data.UserQuizRepository
+import com.example.planet.utils.RankingUtils
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
-@Composable//->주관식형 문제 페이지
+@Composable
 fun QuizSubjectiveQuestionScreen(
     navController: NavHostController,
-    quizList: List<QuizItem>, // ✅ 퀴즈 전체 리스트
-    index: Int // ✅ 현재 인덱스
+    quizList: List<QuizItem>,
+    index: Int
 ) {
-    val quiz = quizList[index] // ✅ 해당 인덱스의 퀴즈만 사용
+    val quiz = quizList[index]
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     var answer by remember { mutableStateOf("") }
     val context = LocalContext.current
 
+    // Firebase
+    val auth = FirebaseAuth.getInstance()
+    val currentUser = auth.currentUser
+    val db = FirebaseFirestore.getInstance()
+
+    // 사용자 정보 상태
+    var userScore by remember { mutableStateOf(0) }
+    var totalQuestions by remember { mutableStateOf(400) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    // 사용자 정보 및 lastQuestionIndex 업데이트
     LaunchedEffect(Unit) {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid
-        if (userId != null) {
-            UserQuizRepository.updateLastQuestionIndex(userId, index)
+        Log.d("QuizSubjective", "주관식 문제 화면 초기화 - 인덱스: $index")
+
+        currentUser?.let { user ->
+            Log.d("QuizSubjective", "사용자 UID: ${user.uid}")
+
+            // 1. 사용자 정보 가져오기
+            RankingUtils.getUserQuizInfo(db, user.uid) { score, total ->
+                userScore = score
+                totalQuestions = total
+                isLoading = false
+                Log.d("QuizSubjective", "사용자 정보 로드 완료 - 점수: $score")
+            }
+
+            // 2. lastQuestionIndex 업데이트 (현재 문제 + 1)
+            val nextQuestionIndex = index + 1
+            RankingUtils.updateLastQuestionIndex(db, user.uid, nextQuestionIndex)
+
+            // 3. SharedPreferences 업데이트 (기존 방식 유지)
+            context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
+                .edit()
+                .putInt("last_index", nextQuestionIndex)
+                .apply()
+        } ?: run {
+            Log.w("QuizSubjective", "로그인되지 않은 사용자")
+            isLoading = false
         }
-        context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
-            .edit()
-            .putInt("last_index", index)
-            .apply()
     }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF7AC5D3))
     ) {
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -81,7 +112,6 @@ fun QuizSubjectiveQuestionScreen(
                 .background(Color.White)
                 .height(800.dp)
         ) {
-
             // 상단 바
             Row(
                 modifier = Modifier
@@ -103,14 +133,14 @@ fun QuizSubjectiveQuestionScreen(
                 }
 
                 Text(
-                    text = "${index + 21} / 100",
+                    text = "${index + 1} / $totalQuestions",
                     fontSize = 18.sp,
                     color = Color.Black,
                     fontFamily = pretendardsemibold
                 )
 
                 Text(
-                    text = "89 P",
+                    text = if (isLoading) "로딩..." else "$userScore P",
                     fontSize = 13.sp,
                     color = Color.Gray,
                     fontFamily = pretendardsemibold
@@ -170,6 +200,7 @@ fun QuizSubjectiveQuestionScreen(
                         Button(
                             onClick = {
                                 if (answer.isNotBlank()) {
+                                    Log.d("QuizSubjective", "답안 제출 - 인덱스: $index, 답안: ${answer.trim()}")
                                     navController.navigate("quiz_answer/$index?userAnswer=${answer.trim()}")
                                 }
                             },

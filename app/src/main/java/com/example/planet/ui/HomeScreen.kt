@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.R
 import com.example.planet.utils.RankingUtils
+import com.example.planet.utils.customShadow
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 

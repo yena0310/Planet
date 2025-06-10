@@ -1,4 +1,4 @@
-package com.example.planet.ui
+package com.example.planet.utils
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier

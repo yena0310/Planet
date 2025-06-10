@@ -1,7 +1,6 @@
 package com.example.planet.ui
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -51,6 +50,7 @@ import com.example.planet.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.planet.data.UserQuizRepository
+import com.example.planet.utils.customShadow
 
 @SuppressLint("SuspiciousIndentation")
 @Composable
@@ -139,7 +139,7 @@ fun StudyQuizPage(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ======= 최근 퀴즈 박스 =======
+        // ======= 최근 퀴즈 박스 (Firebase + SharedPreferences 통합) =======
         Surface(
             tonalElevation = 8.dp,
             shadowElevation = 8.dp,
@@ -150,9 +150,40 @@ fun StudyQuizPage(navController: NavHostController) {
                 .height(80.dp)
                 .customShadow()
                 .clickable {
-                    // 다음 문제 인덱스 계산 (1부터 시작하므로 -1)
-                    val nextIndex = if (lastQuestionIndex <= 1) 0 else lastQuestionIndex - 1
-                    navController.navigate("quiz_question/$nextIndex")
+                    Log.d("RecentQuizBox", "최근 퀴즈 박스 클릭")
+
+                    val userId = FirebaseAuth.getInstance().currentUser?.uid
+
+                    if (userId != null) {
+                        // Firebase에서 lastQuestionIndex 가져오기 (우선순위)
+                        UserQuizRepository.fetchLastQuestionIndex(userId) { fetchedIndex ->
+                            val startIndex = when {
+                                // Firebase에서 가져온 값이 있으면 사용
+                                fetchedIndex != null && fetchedIndex > 0 -> {
+                                    Log.d("RecentQuizBox", "Firebase에서 가져온 인덱스: $fetchedIndex")
+                                    fetchedIndex - 1 // 다음 문제로 이동하기 위해 -1
+                                }
+                                // Firebase 값이 없으면 메모리/SharedPreferences에서 lastQuestionIndex 사용
+                                lastQuestionIndex > 1 -> {
+                                    Log.d("RecentQuizBox", "메모리에서 가져온 인덱스: $lastQuestionIndex")
+                                    lastQuestionIndex - 1
+                                }
+                                // 둘 다 없으면 첫 문제부터
+                                else -> {
+                                    Log.d("RecentQuizBox", "첫 문제부터 시작")
+                                    0
+                                }
+                            }
+
+                            Log.d("RecentQuizBox", "이동할 문제 인덱스: $startIndex")
+                            navController.navigate("quiz_question/$startIndex")
+                        }
+                    } else {
+                        // 로그인되지 않은 경우 메모리의 lastQuestionIndex 사용
+                        val startIndex = if (lastQuestionIndex > 1) lastQuestionIndex - 1 else 0
+                        Log.d("RecentQuizBox", "로그인되지 않음, 메모리 인덱스 사용: $startIndex")
+                        navController.navigate("quiz_question/$startIndex")
+                    }
                 }
         ) {
             Column(
@@ -198,6 +229,7 @@ fun StudyQuizPage(navController: NavHostController) {
                 }
             }
         }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // ======= 틀린문제 복습 박스 =======
