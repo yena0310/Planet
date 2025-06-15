@@ -53,7 +53,7 @@ fun QuizAnswerScreen(
 
     // 사용자 정보 상태
     var userScore by remember { mutableStateOf(0) }
-    var totalQuestions by remember { mutableStateOf(400) }
+    var totalQuestions by remember { mutableStateOf(80) }
     var isLoading by remember { mutableStateOf(true) }
     var scoreUpdated by remember { mutableStateOf(false) }
 

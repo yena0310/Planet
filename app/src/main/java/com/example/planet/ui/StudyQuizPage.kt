@@ -240,7 +240,7 @@ fun StudyQuizPage(navController: NavHostController) {
                 .fillMaxWidth()
                 .height(60.dp)
                 .customShadow()
-                .clickable { /*TODO*/ }
+                .clickable {navController.navigate("quiz_question/61")}
         ) {
             Row(
                 modifier = Modifier
@@ -296,11 +296,11 @@ fun StudyQuizPage(navController: NavHostController) {
 
                 // 🆕 챕터 정보 계산
                 val chapters = listOf(
-                    Triple("1", "Chapter 1", 80),
-                    Triple("2", "Chapter 2", 80),
-                    Triple("3", "Chapter 3", 80),
-                    Triple("4", "Chapter 4", 80),
-                    Triple("5", "Chapter 5", 80)
+                    Triple("1", "Chapter 1", 20),
+                    Triple("2", "Chapter 2", 20),
+                    Triple("3", "Chapter 3", 20),
+                    Triple("4", "Chapter 4", 20),
+                    Triple("5", "Chapter 5", 20)
                 )
 
                 chapters.forEachIndexed { index, (number, title, totalQuestions) ->

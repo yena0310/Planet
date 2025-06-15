@@ -66,6 +66,7 @@ import android.graphics.Matrix
 import com.example.planet.ui.SettingScreen
 import com.example.planet.data.QuizRepository
 import com.example.planet.data.QuizUploader
+import com.example.planet.ui.QuizMatchingAnswerScreen
 
 // Firebase 추가
 import com.google.firebase.auth.FirebaseAuth
@@ -187,6 +188,43 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                 }
+                            }
+                            // NavHost에 매칭 해설 라우트 추가
+                            composable(
+                                route = "quiz_matching_answer/{index}?results={results}",
+                                arguments = listOf(
+                                    navArgument("index") { type = NavType.IntType },
+                                    navArgument("results") {
+                                        type = NavType.StringType
+                                        defaultValue = ""
+                                        nullable = true
+                                    }
+                                )
+                            ) { backStackEntry ->
+                                val index = backStackEntry.arguments?.getInt("index") ?: 0
+                                val resultsString = backStackEntry.arguments?.getString("results") ?: ""
+
+                                // 매칭 결과 파싱
+                                val matchedPairs = if (resultsString.isNotBlank()) {
+                                    try {
+                                        val decoded = java.net.URLDecoder.decode(resultsString, "UTF-8")
+                                        decoded.split(",").associate { pair ->
+                                            val parts = pair.split("|||")
+                                            if (parts.size == 2) {
+                                                parts[0] to parts[1]
+                                            } else {
+                                                "" to ""
+                                            }
+                                        }.filterKeys { it.isNotBlank() }
+                                    } catch (e: Exception) {
+                                        Log.e("MainActivity", "매칭 결과 파싱 실패", e)
+                                        emptyMap()
+                                    }
+                                } else {
+                                    emptyMap()
+                                }
+
+                                QuizMatchingAnswerScreen(navController, fullQuizList, index, matchedPairs)
                             }
                         }
                     }
