@@ -58,20 +58,14 @@ fun QuizMatchingQuestionScreen(
     var totalQuestions by remember { mutableStateOf(80) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // 🆕 현재 문제 세트 (4개씩) - 수정된 부분
-    val currentQuizSet = remember {
+    // 🆕 이미 푼 문제 제외하고 새로운 4개 가져오기
+    val currentQuizSet = remember(index) {
         val matchingQuizzes = quizList.filter { it.type == QuizType.MATCHING }
-
-        // 매칭 퀴즈 중에서 현재 인덱스에 해당하는 4개 선택
-        val matchingIndex = quizList.take(index + 1).count { it.type == QuizType.MATCHING } - 1
-        val startIndex = (matchingIndex / 4) * 4
+        val matchingRoundCount = quizList.take(index).count { it.type == QuizType.MATCHING }
+        val startIndex = matchingRoundCount * 4
         val endIndex = minOf(startIndex + 4, matchingQuizzes.size)
 
-        Log.d("QuizMatching", "전체 매칭 퀴즈 수: ${matchingQuizzes.size}")
-        Log.d("QuizMatching", "현재 매칭 인덱스: $matchingIndex")
-        Log.d("QuizMatching", "선택된 범위: $startIndex ~ $endIndex")
-
-        if (endIndex > startIndex) {
+        if (startIndex < matchingQuizzes.size) {
             matchingQuizzes.subList(startIndex, endIndex)
         } else {
             emptyList()
@@ -226,8 +220,10 @@ fun QuizMatchingQuestionScreen(
             }
             val encodedResults = java.net.URLEncoder.encode(matchingResults, "UTF-8")
 
-            Log.d("QuizMatching", "🚀 매칭 결과 전달: $matchingResults")
-            navController.navigate("quiz_matching_answer/${index}?results=${encodedResults}")
+            val quizIds = currentQuizSet.map { it.id }.joinToString(",")
+            val encodedQuizIds = java.net.URLEncoder.encode(quizIds, "UTF-8")
+
+            navController.navigate("quiz_matching_answer/${index}?results=${encodedResults}&quizIds=${encodedQuizIds}")
         }
     }
 
@@ -413,7 +409,6 @@ fun QuizMatchingQuestionScreen(
                                                 isMatched -> {
                                                     val questionToRemove = matchedPairs.entries.find { it.value == answer }?.key
                                                     questionToRemove?.let { question ->
-                                                        Log.d("QuizMatching", "🔄 답안에서 매칭 취소: $question -> $answer")
                                                         matchedPairs.remove(question)
                                                         selectedQuestion = null
                                                         updateLines()
@@ -421,10 +416,14 @@ fun QuizMatchingQuestionScreen(
                                                 }
                                                 // 🆕 질문이 선택된 상태에서 답안 클릭 → 새로운 매칭 생성
                                                 selected != null -> {
-                                                    // 🆕 이미 해당 질문이 다른 답안과 매칭되어 있다면 기존 매칭 제거
+                                                    // 🔥 핵심 수정: 같은 답안을 사용하던 기존 질문 제거
+                                                    val previousQuestionWithSameAnswer = matchedPairs.entries.find { it.value == answer }?.key
+                                                    if (previousQuestionWithSameAnswer != null) {
+                                                        matchedPairs.remove(previousQuestionWithSameAnswer)
+                                                    }
+
+                                                    // 🔥 현재 선택된 질문의 기존 매칭도 제거
                                                     if (matchedPairs.containsKey(selected)) {
-                                                        val oldAnswer = matchedPairs[selected]
-                                                        Log.d("QuizMatching", "🔄 기존 매칭 제거: $selected -> $oldAnswer")
                                                         matchedPairs.remove(selected)
                                                     }
 
@@ -432,17 +431,10 @@ fun QuizMatchingQuestionScreen(
                                                     matchedPairs[selected] = answer
                                                     selectedQuestion = null
                                                     updateLines()
-                                                    Log.d("QuizMatching", "✅ 새로운 매칭 생성: $selected -> $answer")
-
-                                                    // 🆕 현재 매칭 상태 로그
-                                                    Log.d("QuizMatching", "📊 현재 매칭 상태: ${matchedPairs.size}/${questions.size}")
-                                                    matchedPairs.forEach { (q, a) ->
-                                                        Log.d("QuizMatching", "   $q -> $a")
-                                                    }
                                                 }
                                                 // 🆕 질문이 선택되지 않은 상태에서 답안 클릭
                                                 else -> {
-                                                    Log.d("QuizMatching", "⚠️ 먼저 질문을 선택해주세요!")
+                                                    // 아무것도 하지 않음
                                                 }
                                             }
                                         }

@@ -42,7 +42,8 @@ fun QuizMatchingAnswerScreen(
     navController: NavHostController,
     quizList: List<QuizItem>,
     index: Int,
-    matchedPairs: Map<String, String>
+    matchedPairs: Map<String, String>,
+    quizIds: List<String>
 ) {
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
 
@@ -56,30 +57,13 @@ fun QuizMatchingAnswerScreen(
     var totalQuestions by remember { mutableStateOf(80) }
     var isLoading by remember { mutableStateOf(true) }
     var scoreUpdated by remember { mutableStateOf(false) }
-
-    // 🆕 매칭 퀴즈 세트 가져오기 (중복 방지)
-    val currentQuizSet = remember(index) {
-        val matchingQuizzes = quizList.filter { it.type == QuizType.MATCHING }
-
-        val allMatchingIndices = quizList.mapIndexedNotNull { i, quiz ->
-            if (quiz.type == QuizType.MATCHING) i else null
-        }
-
-        val currentMatchingPosition = allMatchingIndices.indexOf(index)
-
-        if (currentMatchingPosition != -1) {
-            val groupStartPosition = (currentMatchingPosition / 4) * 4
-            val groupEndPosition = minOf(groupStartPosition + 4, matchingQuizzes.size)
-
-            if (groupEndPosition > groupStartPosition) {
-                matchingQuizzes.subList(groupStartPosition, groupEndPosition)
-            } else {
-                emptyList()
-            }
-        } else {
-            emptyList()
+// 🆕 전달받은 quizIds로 문제 찾기 (간단!)
+    val currentQuizSet = remember(quizIds) {
+        quizIds.mapNotNull { id ->
+            quizList.find { it.id == id }
         }
     }
+
 
     // 🆕 정답 매칭 정보
     val correctPairs = remember(currentQuizSet) {

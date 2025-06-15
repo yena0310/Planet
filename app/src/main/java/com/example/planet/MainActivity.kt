@@ -191,18 +191,16 @@ class MainActivity : ComponentActivity() {
                             }
                             // NavHost에 매칭 해설 라우트 추가
                             composable(
-                                route = "quiz_matching_answer/{index}?results={results}",
+                                route = "quiz_matching_answer/{index}?results={results}&quizIds={quizIds}",
                                 arguments = listOf(
                                     navArgument("index") { type = NavType.IntType },
-                                    navArgument("results") {
-                                        type = NavType.StringType
-                                        defaultValue = ""
-                                        nullable = true
-                                    }
+                                    navArgument("results") { type = NavType.StringType; defaultValue = "" },
+                                    navArgument("quizIds") { type = NavType.StringType; defaultValue = "" }
                                 )
                             ) { backStackEntry ->
                                 val index = backStackEntry.arguments?.getInt("index") ?: 0
                                 val resultsString = backStackEntry.arguments?.getString("results") ?: ""
+                                val quizIdsString = backStackEntry.arguments?.getString("quizIds") ?: ""
 
                                 // 매칭 결과 파싱
                                 val matchedPairs = if (resultsString.isNotBlank()) {
@@ -223,8 +221,17 @@ class MainActivity : ComponentActivity() {
                                 } else {
                                     emptyMap()
                                 }
-
-                                QuizMatchingAnswerScreen(navController, fullQuizList, index, matchedPairs)
+                                val quizIds = if (quizIdsString.isNotBlank()) {
+                                    try {
+                                        val decoded = java.net.URLDecoder.decode(quizIdsString, "UTF-8")
+                                        decoded.split(",")
+                                    } catch (e: Exception) {
+                                        emptyList()
+                                    }
+                                } else {
+                                    emptyList()
+                                }
+                                QuizMatchingAnswerScreen(navController, fullQuizList, index, matchedPairs, quizIds)
                             }
                         }
                     }
