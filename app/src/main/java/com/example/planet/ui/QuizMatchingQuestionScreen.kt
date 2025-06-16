@@ -35,9 +35,12 @@ import com.example.planet.QuizItem
 import com.example.planet.QuizType
 import com.example.planet.R
 import com.example.planet.utils.RankingUtils
+import com.example.planet.utils.UserStateManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun QuizMatchingQuestionScreen(
@@ -49,13 +52,12 @@ fun QuizMatchingQuestionScreen(
     val context = LocalContext.current
 
     // Firebase
-    val auth = FirebaseAuth.getInstance()
-    val currentUser = auth.currentUser
+    val currentUserId = UserStateManager.getUserId()
     val db = FirebaseFirestore.getInstance()
 
     // 사용자 정보 상태
     var userScore by remember { mutableStateOf(0) }
-    var totalQuestions by remember { mutableStateOf(80) }
+    var totalQuestions by remember { mutableStateOf(100) }
     var isLoading by remember { mutableStateOf(true) }
 
     // 🆕 이미 푼 문제 제외하고 새로운 4개 가져오기
@@ -110,11 +112,11 @@ fun QuizMatchingQuestionScreen(
     LaunchedEffect(Unit) {
         Log.d("QuizMatching", "매칭 문제 화면 초기화 - 인덱스: $index")
 
-        currentUser?.let { user ->
-            Log.d("QuizMatching", "사용자 UID: ${user.uid}")
+        currentUserId?.let { userId ->
+            Log.d("QuizMatching", "사용자 UID: $userId")
 
             // 1. 사용자 정보 가져오기
-            RankingUtils.getUserQuizInfo(db, user.uid) { score, total ->
+            RankingUtils.getUserQuizInfo(db, userId) { score, total ->
                 userScore = score
                 totalQuestions = total
                 isLoading = false
@@ -123,7 +125,7 @@ fun QuizMatchingQuestionScreen(
 
             // 2. lastQuestionIndex 업데이트 (현재 문제 + 1)
             val nextQuestionIndex = index + 1
-            RankingUtils.updateLastQuestionIndex(db, user.uid, nextQuestionIndex)
+            RankingUtils.updateLastQuestionIndex(db, userId, nextQuestionIndex)
 
             // 3. SharedPreferences 업데이트 (기존 방식 유지)
             context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
@@ -214,16 +216,20 @@ fun QuizMatchingQuestionScreen(
             Log.d("QuizMatching", "=====================================")
 
             delay(1000)
-            // 🆕 매칭 결과를 URL 파라미터로 전달
-            val matchingResults = matchedPairs.entries.joinToString(",") { (q, a) ->
-                "${q}|||${a}" // |||로 구분 (쉼표나 콜론이 문제 내용에 있을 수 있어서)
+
+            // 🆕 메인 스레드에서 Navigation 실행
+            withContext(Dispatchers.Main) {
+                // 🆕 매칭 결과를 URL 파라미터로 전달
+                val matchingResults = matchedPairs.entries.joinToString(",") { (q, a) ->
+                    "${q}|||${a}" // |||로 구분 (쉼표나 콜론이 문제 내용에 있을 수 있어서)
+                }
+                val encodedResults = java.net.URLEncoder.encode(matchingResults, "UTF-8")
+
+                val quizIds = currentQuizSet.map { it.id }.joinToString(",")
+                val encodedQuizIds = java.net.URLEncoder.encode(quizIds, "UTF-8")
+
+                navController.navigate("quiz_matching_answer/${index}?results=${encodedResults}&quizIds=${encodedQuizIds}")
             }
-            val encodedResults = java.net.URLEncoder.encode(matchingResults, "UTF-8")
-
-            val quizIds = currentQuizSet.map { it.id }.joinToString(",")
-            val encodedQuizIds = java.net.URLEncoder.encode(quizIds, "UTF-8")
-
-            navController.navigate("quiz_matching_answer/${index}?results=${encodedResults}&quizIds=${encodedQuizIds}")
         }
     }
 

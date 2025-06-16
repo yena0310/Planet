@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.example.planet.QuizItem
 import com.example.planet.R
 import com.example.planet.utils.RankingUtils
+import com.example.planet.utils.UserStateManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -47,13 +48,12 @@ fun QuizAnswerScreen(
     val isCorrect = userAnswer?.trim()?.equals(quiz.correctAnswer.trim(), ignoreCase = true) == true
 
     // Firebase
-    val auth = FirebaseAuth.getInstance()
-    val currentUser = auth.currentUser
+    val currentUserId = UserStateManager.getUserId()
     val db = FirebaseFirestore.getInstance()
 
     // 사용자 정보 상태
     var userScore by remember { mutableStateOf(0) }
-    var totalQuestions by remember { mutableStateOf(80) }
+    var totalQuestions by remember { mutableStateOf(100) }
     var isLoading by remember { mutableStateOf(true) }
     var scoreUpdated by remember { mutableStateOf(false) }
 
@@ -61,11 +61,11 @@ fun QuizAnswerScreen(
     LaunchedEffect(Unit) {
         Log.d("QuizAnswer", "해설 화면 초기화 - 인덱스: $index, 정답여부: $isCorrect, 사용자답안: $userAnswer")
 
-        currentUser?.let { user ->
-            Log.d("QuizAnswer", "사용자 UID: ${user.uid}")
+        currentUserId?.let { userId ->
+            Log.d("QuizAnswer", "사용자 UID: $userId")
 
             // 1. 현재 사용자 정보 가져오기
-            db.collection("users").document(user.uid).get()
+            db.collection("users").document(userId).get()
                 .addOnSuccessListener { userDoc ->
                     if (userDoc.exists()) {
                         val currentScore = userDoc.getLong("score")?.toInt() ?: 0
@@ -83,7 +83,7 @@ fun QuizAnswerScreen(
                             // 3. RankingUtils를 통한 점수 및 랭킹 업데이트
                             RankingUtils.updateUserScoreAndRanking(
                                 db = db,
-                                userId = user.uid,
+                                userId = userId,
                                 newScore = newScore,
                                 onSuccess = {
                                     userScore = newScore

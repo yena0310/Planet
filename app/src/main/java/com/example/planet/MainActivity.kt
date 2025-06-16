@@ -67,6 +67,7 @@ import com.example.planet.ui.SettingScreen
 import com.example.planet.data.QuizRepository
 import com.example.planet.data.QuizUploader
 import com.example.planet.ui.QuizMatchingAnswerScreen
+import com.example.planet.utils.UserStateManager
 
 // Firebase 추가
 import com.google.firebase.auth.FirebaseAuth
@@ -91,6 +92,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        UserStateManager.initialize(this)
 
         detector = Yolov8sDetector(this)
         labelDetector = LabelDetector(this)
@@ -143,11 +146,18 @@ class MainActivity : ComponentActivity() {
                                 .background(Color(0xFFCAEBF1))//배경색 지정
                         ) {
                             composable("login") { LoginScreen(navController) }
-                            composable("welcome") { WelcomeScreen(navController) }
+                            composable(
+                                "welcome/{userId}",
+                                arguments = listOf(navArgument("userId") { type = NavType.StringType })
+                            ) { backStackEntry ->
+                                val userId = backStackEntry.arguments?.getString("userId")
+                                WelcomeScreen(navController, userId)
+                            }
                             composable("home") { HomeScreen(navController) }
                             composable("quiz") { StudyQuizPage(navController) }
                             composable("rank") { LeaderboardScreen(navController) }
                             composable("mypage") { Mypage(navController) }
+                            composable("setting") { SettingScreen(navController) }
                             composable("camera") { CameraScreen(navController, this@MainActivity) }
                             composable("recycle_sign_guide") { RecycleSignGuide(navController, guideText = labelGuideText) }
                             composable("waste_guide") { GuideResultScreen(navController, guideText = wasteGuideText) }

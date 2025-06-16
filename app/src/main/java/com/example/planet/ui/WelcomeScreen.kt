@@ -31,24 +31,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.R
+import com.example.planet.utils.UserStateManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
-fun WelcomeScreen(navController: NavHostController) {
+fun WelcomeScreen(navController: NavHostController, userId: String? = null) {
     val auth = FirebaseAuth.getInstance()
     val currentUser = auth.currentUser
+    val actualUserId = userId ?: currentUser?.uid
+
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val pretendardextrabold = FontFamily(Font(R.font.pretendardextrabold))
 
     var userDisplayInfo by remember { mutableStateOf("정보를 불러오는 중...") }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(actualUserId) {
         Log.d("WelcomeScreen", "화면 시작")
-        currentUser?.let { user ->
-            Log.d("WelcomeScreen", "사용자 UID: ${user.uid}")
+        Log.d("WelcomeScreen", "사용할 UserId: $actualUserId")
+
+        if (actualUserId != null) {
+            // UserStateManager에 사용자 설정 (아직 설정되지 않은 경우에만)
+            if (UserStateManager.currentUserId == null) {
+                UserStateManager.setUser(actualUserId)
+            }
+
             val db = FirebaseFirestore.getInstance()
-            val userRef = db.collection("users").document(user.uid)
+            val userRef = db.collection("users").document(actualUserId)
 
             userRef.get()
                 .addOnSuccessListener { userDoc ->
@@ -58,6 +67,9 @@ fun WelcomeScreen(navController: NavHostController) {
 
                         val name = userDoc.getString("name") ?: ""
                         Log.d("WelcomeScreen", "사용자 이름: $name")
+
+                        // UserStateManager에도 사용자 정보 반영
+                        UserStateManager.setUser(actualUserId)
 
                         // 직접 저장한 정보 사용 (더 간단하고 안정적)
                         val schoolName = userDoc.getString("schoolName")
@@ -79,21 +91,37 @@ fun WelcomeScreen(navController: NavHostController) {
 
                                         // 반 문서에서 직접 grade, classNum 가져오기
                                         val gradeFromClass = classDoc.getLong("grade")?.toInt()
-                                        val classNumFromClass = classDoc.getLong("number")?.toInt()
+                                        val classNumFromClass =
+                                            classDoc.getLong("number")?.toInt()
 
-                                        Log.d("WelcomeScreen", "반에서 가져온 정보 - grade: $gradeFromClass, classNum: $classNumFromClass")
+                                        Log.d(
+                                            "WelcomeScreen",
+                                            "반에서 가져온 정보 - grade: $gradeFromClass, classNum: $classNumFromClass"
+                                        )
 
-                                        val schoolRef = classDoc.getDocumentReference("schoolId")
+                                        val schoolRef =
+                                            classDoc.getDocumentReference("schoolId")
                                         schoolRef?.get()
                                             ?.addOnSuccessListener { schoolDoc ->
-                                                Log.d("WelcomeScreen", "학교 문서 존재: ${schoolDoc.exists()}")
+                                                Log.d(
+                                                    "WelcomeScreen",
+                                                    "학교 문서 존재: ${schoolDoc.exists()}"
+                                                )
                                                 if (schoolDoc.exists()) {
-                                                    Log.d("WelcomeScreen", "학교 문서 데이터: ${schoolDoc.data}")
-                                                    val schoolNameFromRef = schoolDoc.getString("name") ?: ""
+                                                    Log.d(
+                                                        "WelcomeScreen",
+                                                        "학교 문서 데이터: ${schoolDoc.data}"
+                                                    )
+                                                    val schoolNameFromRef =
+                                                        schoolDoc.getString("name") ?: ""
 
                                                     if (gradeFromClass != null && classNumFromClass != null) {
-                                                        userDisplayInfo = "$schoolNameFromRef ${gradeFromClass}학년 ${classNumFromClass}반\n$name"
-                                                        Log.d("WelcomeScreen", "참조 방식으로 정보 설정 완료: $userDisplayInfo")
+                                                        userDisplayInfo =
+                                                            "$schoolNameFromRef ${gradeFromClass}학년 ${classNumFromClass}반\n$name"
+                                                        Log.d(
+                                                            "WelcomeScreen",
+                                                            "참조 방식으로 정보 설정 완료: $userDisplayInfo"
+                                                        )
                                                     } else {
                                                         userDisplayInfo = "반 정보를 완전히 불러오지 못했습니다"
                                                         Log.w("WelcomeScreen", "반 정보 불완전")
@@ -126,9 +154,9 @@ fun WelcomeScreen(navController: NavHostController) {
                     userDisplayInfo = "사용자 정보를 불러오지 못했습니다"
                     Log.e("WelcomeScreen", "사용자 정보 로드 실패", e)
                 }
-        } ?: run {
+        } else {
             userDisplayInfo = "로그인이 필요합니다"
-            Log.w("WelcomeScreen", "사용자 없음")
+            Log.w("WelcomeScreen", "사용자 ID 없음")
         }
     }
 

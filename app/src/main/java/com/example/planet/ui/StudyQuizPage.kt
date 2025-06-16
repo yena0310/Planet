@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.R
+import com.example.planet.utils.UserStateManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.planet.data.UserQuizRepository
@@ -60,8 +62,7 @@ fun StudyQuizPage(navController: NavHostController) {
     val context = LocalContext.current
 
     // Firebase
-    val auth = FirebaseAuth.getInstance()
-    val currentUser = auth.currentUser
+    val currentUserId = UserStateManager.getUserId()
     val db = FirebaseFirestore.getInstance()
 
     // 사용자 정보 상태
@@ -73,10 +74,10 @@ fun StudyQuizPage(navController: NavHostController) {
     // 사용자 정보 가져오기
     LaunchedEffect(Unit) {
         Log.d("StudyQuizPage", "사용자 정보 로드 시작")
-        currentUser?.let { user ->
-            Log.d("StudyQuizPage", "사용자 UID: ${user.uid}")
+        currentUserId?.let { userId ->
+            Log.d("StudyQuizPage", "사용자 UID: $userId")
 
-            db.collection("users").document(user.uid).get()
+            db.collection("users").document(userId).get()
                 .addOnSuccessListener { userDoc ->
                     Log.d("StudyQuizPage", "사용자 문서 존재: ${userDoc.exists()}")
                     if (userDoc.exists()) {
@@ -152,7 +153,7 @@ fun StudyQuizPage(navController: NavHostController) {
                 .clickable {
                     Log.d("RecentQuizBox", "최근 퀴즈 박스 클릭")
 
-                    val userId = FirebaseAuth.getInstance().currentUser?.uid
+                    val userId = UserStateManager.getUserId()
 
                     if (userId != null) {
                         // Firebase에서 lastQuestionIndex 가져오기 (우선순위)
@@ -316,6 +317,15 @@ fun StudyQuizPage(navController: NavHostController) {
                             lastQuestionIndex > chapterStartIndex &&
                             lastQuestionIndex <= chapterEndIndex + 1
 
+                    // 🆕 접근 가능한지 확인 (순서대로만 접근 가능)
+                    val isAccessible = !isLoading && (
+                            index == 0 || // 첫 번째 챕터는 항상 접근 가능
+                                    lastQuestionIndex > chapterStartIndex // 이전 챕터를 완료했을 때만 접근 가능
+                            )
+
+                    // 잠겨있는지 확인
+                    val isLocked = !isLoading && !isAccessible
+
                     // 해당 챕터에서 몇 문제 완료했는지 계산
                     val completedInChapter = when {
                         isCompleted -> totalQuestions
@@ -325,32 +335,57 @@ fun StudyQuizPage(navController: NavHostController) {
 
                     val subtitle = when {
                         isLoading -> "로딩중..."
+                        isLocked -> "$totalQuestions 문제 | 잠김"
                         isCompleted -> "$totalQuestions 문제 | 완료!"
                         isCurrentChapter -> "$totalQuestions 문제 | ${completedInChapter}/$totalQuestions"
                         else -> "$totalQuestions 문제"
                     }
 
-                    val backgroundColor = if (isCompleted) Color(0xFF4E4E58) else Color.White
-                    val borderColor = if (isCompleted) Color.Transparent else Color(0xFFB9DEE4)
-                    val titleColor = if (isCompleted) Color(0xFFC2EFF7) else Color(0xFF546A6E)
-                    val subtitleColor = if (isCompleted) Color(0xFF95D0DB) else Color(0xFF858494)
+                    val backgroundColor = when {
+                        isLocked -> Color(0xFFF5F5F5) // 회색 배경
+                        isCompleted -> Color(0xFF4E4E58) // 완료된 챕터
+                        else -> Color.White // 일반 상태
+                    }
+
+                    val borderColor = when {
+                        isLocked -> Color(0xFFE0E0E0) // 연한 회색 테두리
+                        isCompleted -> Color.Transparent
+                        else -> Color(0xFFB9DEE4)
+                    }
+
+                    val titleColor = when {
+                        isLocked -> Color(0xFFBDBDBD) // 연한 회색
+                        isCompleted -> Color(0xFFC2EFF7)
+                        else -> Color(0xFF546A6E)
+                    }
+
+                    val subtitleColor = when {
+                        isLocked -> Color(0xFFE0E0E0) // 연한 회색
+                        isCompleted -> Color(0xFF95D0DB)
+                        else -> Color(0xFF858494)
+                    }
 
                     Button(
                         onClick = {
-                            val startIndex = when {
-                                // 완료된 챕터면 해당 챕터 첫 문제로
-                                isCompleted -> chapterStartIndex
-                                // 현재 진행 중인 챕터면 마지막 문제 인덱스로
-                                isCurrentChapter -> lastQuestionIndex - 1
-                                // 아직 시작하지 않은 챕터면 해당 챕터 첫 문제로
-                                else -> chapterStartIndex
+                            if (!isLocked) {
+                                val startIndex = when {
+                                    // 완료된 챕터면 해당 챕터 첫 문제로
+                                    isCompleted -> chapterStartIndex
+                                    // 현재 진행 중인 챕터면 마지막 문제 인덱스로
+                                    isCurrentChapter -> lastQuestionIndex - 1
+                                    // 아직 시작하지 않은 챕터면 해당 챕터 첫 문제로
+                                    else -> chapterStartIndex
+                                }
+                                Log.d("StudyQuizPage", "챕터 $number 클릭 - startIndex: $startIndex")
+                                navController.navigate("quiz_question/$startIndex")
+                            } else {
+                                Log.d("StudyQuizPage", "챕터 $number 잠김 - 이전 챕터를 먼저 완료하세요")
                             }
-                            Log.d("StudyQuizPage", "챕터 $number 클릭 - startIndex: $startIndex")
-                            navController.navigate("quiz_question/$startIndex")
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
                         shape = RoundedCornerShape(20.dp),
                         contentPadding = PaddingValues(),
+                        enabled = !isLocked, // 잠긴 챕터는 비활성화
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(80.dp)
@@ -370,17 +405,26 @@ fun StudyQuizPage(navController: NavHostController) {
                                 modifier = Modifier
                                     .size(60.dp)
                                     .background(
-                                        Color(0xFF53AEBE),
+                                        if (isLocked) Color(0xFFE0E0E0) else Color(0xFF53AEBE),
                                         shape = RoundedCornerShape(17.dp)
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = number,
-                                    fontSize = 27.sp,
-                                    fontFamily = pretendardbold,
-                                    color = Color.White
-                                )
+                                if (isLocked) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Locked",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(30.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        text = number,
+                                        fontSize = 27.sp,
+                                        fontFamily = pretendardbold,
+                                        color = Color.White
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.width(16.dp))
@@ -402,11 +446,13 @@ fun StudyQuizPage(navController: NavHostController) {
 
                             Spacer(modifier = Modifier.weight(1f))
 
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.NavigateNext,
-                                contentDescription = "Next",
-                                tint = Color(0xFF53AEBE)
-                            )
+                            if (!isLocked) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.NavigateNext,
+                                    contentDescription = "Next",
+                                    tint = Color(0xFF53AEBE)
+                                )
+                            }
                         }
                     }
 

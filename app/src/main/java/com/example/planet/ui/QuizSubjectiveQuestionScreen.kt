@@ -44,6 +44,7 @@ import androidx.navigation.NavHostController
 import com.example.planet.QuizItem
 import com.example.planet.R
 import com.example.planet.utils.RankingUtils
+import com.example.planet.utils.UserStateManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -59,24 +60,23 @@ fun QuizSubjectiveQuestionScreen(
     val context = LocalContext.current
 
     // Firebase
-    val auth = FirebaseAuth.getInstance()
-    val currentUser = auth.currentUser
+    val currentUserId = UserStateManager.getUserId()
     val db = FirebaseFirestore.getInstance()
 
     // 사용자 정보 상태
     var userScore by remember { mutableStateOf(0) }
-    var totalQuestions by remember { mutableStateOf(80) }
+    var totalQuestions by remember { mutableStateOf(100) }
     var isLoading by remember { mutableStateOf(true) }
 
     // 사용자 정보 및 lastQuestionIndex 업데이트
     LaunchedEffect(Unit) {
         Log.d("QuizSubjective", "주관식 문제 화면 초기화 - 인덱스: $index")
 
-        currentUser?.let { user ->
-            Log.d("QuizSubjective", "사용자 UID: ${user.uid}")
+        currentUserId?.let { userId ->
+            Log.d("QuizSubjective", "사용자 UID: $userId")
 
             // 1. 사용자 정보 가져오기
-            RankingUtils.getUserQuizInfo(db, user.uid) { score, total ->
+            RankingUtils.getUserQuizInfo(db, userId) { score, total ->
                 userScore = score
                 totalQuestions = total
                 isLoading = false
@@ -85,7 +85,7 @@ fun QuizSubjectiveQuestionScreen(
 
             // 2. lastQuestionIndex 업데이트 (현재 문제 + 1)
             val nextQuestionIndex = index + 1
-            RankingUtils.updateLastQuestionIndex(db, user.uid, nextQuestionIndex)
+            RankingUtils.updateLastQuestionIndex(db, userId, nextQuestionIndex)
 
             // 3. SharedPreferences 업데이트 (기존 방식 유지)
             context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)

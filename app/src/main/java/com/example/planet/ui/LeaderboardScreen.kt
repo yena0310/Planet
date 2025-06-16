@@ -53,20 +53,12 @@ import androidx.compose.material.BottomSheetScaffold
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.rememberBottomSheetScaffoldState
 import com.example.planet.utils.RankingUtils
+import com.example.planet.utils.UserStateManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.example.planet.utils.StudentRanking
-
-
-// 랭킹 데이터 클래스
-data class StudentRanking(
-    val userId: String,
-    val name: String,
-    val score: Int,
-    val rank: Int,
-    val isCurrentUser: Boolean = false
-)
+import com.example.planet.utils.ClassRanking
 
 @Composable
 fun LeaderboardScreen(navController: NavHostController) {
@@ -74,27 +66,50 @@ fun LeaderboardScreen(navController: NavHostController) {
     var selectedTab by remember { mutableStateOf("학생별") }
 
     // Firebase
-    val auth = FirebaseAuth.getInstance()
-    val currentUser = auth.currentUser
+    val currentUserId = UserStateManager.getUserId()
     val db = FirebaseFirestore.getInstance()
 
-    // 상태 변수들
+    // 학생별 상태 변수들
     var myRanking by remember { mutableStateOf(0) }
     var myScore by remember { mutableStateOf(0) }
     var percentileAhead by remember { mutableStateOf(0) }
     var classRankings by remember { mutableStateOf(listOf<StudentRanking>()) }
+
+    // 학급별 상태 변수들
+    var myClassRanking by remember { mutableStateOf(0) }
+    var myClassScore by remember { mutableStateOf(0) }
+    var classPercentileAhead by remember { mutableStateOf(0) }
+    var schoolClassRankings by remember { mutableStateOf(listOf<ClassRanking>()) }
+
     var isLoading by remember { mutableStateOf(true) }
 
-    // 실제 랭킹 데이터 로드
-    LaunchedEffect(Unit) {
-        Log.d("LeaderboardScreen", "랭킹 데이터 로드 시작")
-        currentUser?.let { user ->
-            RankingUtils.loadClassRankings(db, user.uid) { rankings, userRank, userScore, percentile ->
-                classRankings = rankings
-                myRanking = userRank
-                myScore = userScore
-                percentileAhead = percentile
-                isLoading = false
+    // 선택된 탭에 따라 데이터 로드
+    LaunchedEffect(selectedTab) {
+        Log.d("LeaderboardScreen", "랭킹 데이터 로드 시작 - 탭: $selectedTab")
+        isLoading = true
+
+        currentUserId?.let { userId ->
+            when (selectedTab) {
+                "학생별" -> {
+                    RankingUtils.loadClassRankings(db, userId) { rankings, userRank, userScore, percentile ->
+                        classRankings = rankings
+                        myRanking = userRank
+                        myScore = userScore
+                        percentileAhead = percentile
+                        isLoading = false
+                        Log.d("LeaderboardScreen", "학생별 랭킹 로드 완료 - 랭킹: $userRank, 점수: $userScore")
+                    }
+                }
+                "학급별" -> {
+                    RankingUtils.loadSchoolClassRankings(db, userId) { rankings, classRank, userScore, percentile ->
+                        schoolClassRankings = rankings
+                        myClassRanking = classRank
+                        myClassScore = userScore
+                        classPercentileAhead = percentile
+                        isLoading = false
+                        Log.d("LeaderboardScreen", "학급별 랭킹 로드 완료 - 학급 랭킹: $classRank, 퍼센타일: $percentile")
+                    }
+                }
             }
         } ?: run {
             isLoading = false
@@ -183,13 +198,16 @@ fun LeaderboardScreen(navController: NavHostController) {
                         Text(
                             text = when {
                                 isLoading -> "..."
-                                classRankings.size <= 1 -> "👑"
-                                myScore == 0 -> "🎯"
+                                selectedTab == "학생별" && classRankings.size <= 1 -> "👑"
+                                selectedTab == "학급별" && schoolClassRankings.size <= 1 -> "👑"
+                                selectedTab == "학생별" && myScore == 0 -> "🎯"
+                                selectedTab == "학급별" -> "#$myClassRanking"
                                 else -> "#$myRanking"
                             },
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
-                            fontSize = if (classRankings.size <= 1 || myScore == 0) 24.sp else 21.sp,
+                            fontSize = if ((selectedTab == "학생별" && (classRankings.size <= 1 || myScore == 0)) ||
+                                (selectedTab == "학급별" && schoolClassRankings.size <= 1)) 24.sp else 21.sp,
                             fontFamily = pretendard
                         )
                     }
@@ -198,7 +216,11 @@ fun LeaderboardScreen(navController: NavHostController) {
 
                     Text(
                         text = if (isLoading) "로딩중..."
-                        else "다른 학급 친구들보다\n${percentileAhead}% 앞서고 있어요!",
+                        else when (selectedTab) {
+                            "학생별" -> "다른 학급 친구들보다\n${percentileAhead}% 앞서고 있어요!"
+                            "학급별" -> "다른 학급들보다\n${classPercentileAhead}% 앞서고 있어요!"
+                            else -> ""
+                        },
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = pretendard,
                         fontSize = 13.sp,
@@ -209,14 +231,39 @@ fun LeaderboardScreen(navController: NavHostController) {
                 }
             }
 
-            LeaderboardScreenWithBottomSheet(classRankings, isLoading, myScore)
+            when (selectedTab) {
+                "학생별" -> {
+                    LeaderboardScreenWithBottomSheet(
+                        studentRankings = classRankings,
+                        classRankings = emptyList(),
+                        isLoading = isLoading,
+                        myScore = myScore,
+                        isStudentView = true
+                    )
+                }
+                "학급별" -> {
+                    LeaderboardScreenWithBottomSheet(
+                        studentRankings = emptyList(),
+                        classRankings = schoolClassRankings,
+                        isLoading = isLoading,
+                        myScore = myClassScore,
+                        isStudentView = false
+                    )
+                }
+            }
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
-fun LeaderboardScreenWithBottomSheet(rankings: List<StudentRanking>, isLoading: Boolean, myScore: Int) {
+fun LeaderboardScreenWithBottomSheet(
+    studentRankings: List<StudentRanking>,
+    classRankings: List<ClassRanking>,
+    isLoading: Boolean,
+    myScore: Int,
+    isStudentView: Boolean
+) {
     val sheetState = rememberBottomSheetScaffoldState()
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
 
@@ -229,7 +276,11 @@ fun LeaderboardScreenWithBottomSheet(rankings: List<StudentRanking>, isLoading: 
                     .fillMaxWidth()
                     .height(screenHeight * 0.9f)
             ) {
-                LeaderboardList(rankings, isLoading)
+                if (isStudentView) {
+                    LeaderboardList(studentRankings, isLoading)
+                } else {
+                    ClassLeaderboardList(classRankings, isLoading)
+                }
             }
         }
     ) { innerPadding ->
@@ -255,8 +306,8 @@ fun LeaderboardScreenWithBottomSheet(rankings: List<StudentRanking>, isLoading: 
                         .offset(y = 60.dp)
                 )
 
-                // 상위 3명 표시
-                if (!isLoading && rankings.isNotEmpty()) {
+                // 상위 3명/3개 학급 표시
+                if (!isLoading) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -265,37 +316,69 @@ fun LeaderboardScreenWithBottomSheet(rankings: List<StudentRanking>, isLoading: 
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.Bottom
                     ) {
-                        // 2등 (왼쪽)
-                        if (rankings.size >= 2) {
-                            PodiumItem(
-                                name = rankings[1].name,
-                                score = rankings[1].score,
-                                rank = 2,
-                                modifier = Modifier.offset(x = 10.dp)
-                            )
-                        }
+                        if (isStudentView && studentRankings.isNotEmpty()) {
+                            // 학생별 시상대
+                            if (studentRankings.size >= 2) {
+                                PodiumItem(
+                                    name = studentRankings[1].name,
+                                    score = studentRankings[1].score,
+                                    rank = 2,
+                                    modifier = Modifier.offset(x = 10.dp),
+                                    isClass = false
+                                )
+                            }
 
-                        // 1등 (가운데)
-                        if (rankings.isNotEmpty()) {
-                            PodiumItem(
-                                name = rankings[0].name,
-                                score = rankings[0].score,
-                                rank = 1
-                            )
-                        }
+                            if (studentRankings.isNotEmpty()) {
+                                PodiumItem(
+                                    name = studentRankings[0].name,
+                                    score = studentRankings[0].score,
+                                    rank = 1,
+                                    isClass = false
+                                )
+                            }
 
-                        // 3등 (오른쪽)
-                        if (rankings.size >= 3) {
-                            PodiumItem(
-                                name = rankings[2].name,
-                                score = rankings[2].score,
-                                rank = 3,
-                                modifier = Modifier.offset(x = (-10).dp)
-                            )
+                            if (studentRankings.size >= 3) {
+                                PodiumItem(
+                                    name = studentRankings[2].name,
+                                    score = studentRankings[2].score,
+                                    rank = 3,
+                                    modifier = Modifier.offset(x = (-10).dp),
+                                    isClass = false
+                                )
+                            }
+                        } else if (!isStudentView && classRankings.isNotEmpty()) {
+                            // 학급별 시상대
+                            if (classRankings.size >= 2) {
+                                ClassPodiumItem(
+                                    classRanking = classRankings[1],
+                                    rank = 2,
+                                    modifier = Modifier.offset(x = 10.dp)
+                                )
+                            }
+
+                            if (classRankings.isNotEmpty()) {
+                                ClassPodiumItem(
+                                    classRanking = classRankings[0],
+                                    rank = 1
+                                )
+                            }
+
+                            if (classRankings.size >= 3) {
+                                ClassPodiumItem(
+                                    classRanking = classRankings[2],
+                                    rank = 3,
+                                    modifier = Modifier.offset(x = (-10).dp)
+                                )
+                            }
+                        } else {
+                            // 로딩 중이거나 데이터가 없을 때
+                            PodiumItem(name = "곧 채워질", score = 0, rank = 2, modifier = Modifier.offset(x = 10.dp), isClass = false)
+                            PodiumItem(name = if (isLoading) "로딩중" else "당신", score = myScore, rank = 1, isClass = false)
+                            PodiumItem(name = "예정", score = 0, rank = 3, modifier = Modifier.offset(x = (-10).dp), isClass = false)
                         }
                     }
                 } else {
-                    // 로딩 중이거나 데이터가 없을 때
+                    // 로딩 중
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -304,14 +387,75 @@ fun LeaderboardScreenWithBottomSheet(rankings: List<StudentRanking>, isLoading: 
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.Bottom
                     ) {
-                        PodiumItem(name = "곧 채워질", score = 0, rank = 2, modifier = Modifier.offset(x = 10.dp))
-                        PodiumItem(name = if (isLoading) "로딩중" else "당신", score = myScore, rank = 1)
-                        PodiumItem(name = "예정", score = 0, rank = 3, modifier = Modifier.offset(x = (-10).dp))
+                        PodiumItem(name = "곧 채워질", score = 0, rank = 2, modifier = Modifier.offset(x = 10.dp), isClass = false)
+                        PodiumItem(name = "로딩중", score = myScore, rank = 1, isClass = false)
+                        PodiumItem(name = "예정", score = 0, rank = 3, modifier = Modifier.offset(x = (-10).dp), isClass = false)
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+fun ClassLeaderboardList(rankings: List<ClassRanking>, isLoading: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFE0F7FA), shape = RoundedCornerShape(24.dp))
+            .padding(horizontal = 16.dp, vertical = 15.dp)
+    ) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("로딩중...", fontSize = 16.sp, color = Color.Gray)
+            }
+        } else if (rankings.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("🏫", fontSize = 48.sp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "학교의 첫 번째 학급이에요!",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF546A6E)
+                    )
+                    Text(
+                        "학급 친구들과 함께 퀴즈를 풀어보세요",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                itemsIndexed(rankings) { index, classRanking ->
+                    ClassLeaderboardRow(
+                        rank = classRanking.rank,
+                        grade = classRanking.grade,
+                        classNumber = classRanking.classNumber,
+                        totalScore = classRanking.totalScore,
+                        studentCount = classRanking.studentCount,
+                        color = getClassColor(index),
+                        isMyClass = classRanking.isCurrentClass
+                    )
+                }
+            }
         }
     }
 }
@@ -375,6 +519,19 @@ fun LeaderboardList(rankings: List<StudentRanking>, isLoading: Boolean) {
     }
 }
 
+// 학급별 색상 지정
+fun getClassColor(index: Int): Color {
+    val colors = listOf(
+        Color(0xFFFFF2CC), // 1등 - 노란색
+        Color(0xFFE8F5E8), // 2등 - 초록색
+        Color(0xFFFFE6F3), // 3등 - 분홍색
+        Color(0xFFE6F3FF), // 4등 - 파란색
+        Color(0xFFF0E6FF), // 5등 - 보라색
+        Color(0xFFE8E8E8)  // 기타 - 회색
+    )
+    return colors.getOrElse(index) { Color.LightGray }
+}
+
 // 학생별 색상 지정
 fun getStudentColor(index: Int): Color {
     val colors = listOf(
@@ -389,7 +546,68 @@ fun getStudentColor(index: Int): Color {
 }
 
 @Composable
-fun PodiumItem(name: String, score: Int, rank: Int, modifier: Modifier = Modifier) {
+fun ClassPodiumItem(classRanking: ClassRanking, rank: Int, modifier: Modifier = Modifier) {
+    val avatarColor = when (rank) {
+        1 -> Color(0xFFFFF2CC)
+        2 -> Color(0xFFE8F5E8)
+        3 -> Color(0xFFFFE6F3)
+        else -> Color.LightGray
+    }
+    val offsetY = when (rank) {
+        1 -> (-30).dp
+        2 -> (0).dp
+        3 -> (+30).dp
+        else -> 0.dp
+    }
+
+    Column(
+        modifier = modifier
+            .width(80.dp)
+            .offset(y = offsetY),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(50.dp)
+                .border(0.5.dp, Color(0xff53AEBE), shape = CircleShape)
+                .background(avatarColor, shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "${classRanking.grade}-${classRanking.classNumber}",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        }
+
+        Text(
+            text = "${classRanking.grade}학년 ${classRanking.classNumber}반",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.Black,
+            textAlign = TextAlign.Center
+        )
+
+        Box(
+            modifier = Modifier
+                .background(Color.White, shape = RoundedCornerShape(40))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "${classRanking.totalScore} P",
+                fontSize = 9.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black
+            )
+        }
+    }
+}
+
+@Composable
+fun PodiumItem(name: String, score: Int, rank: Int, modifier: Modifier = Modifier, isClass: Boolean = false) {
     val avatarColor = when (rank) {
         1 -> Color(0xFFDFF5E5)
         2 -> Color(0xFFFFD5DC)
@@ -442,13 +660,111 @@ fun PodiumItem(name: String, score: Int, rank: Int, modifier: Modifier = Modifie
 }
 
 @Composable
+fun ClassLeaderboardRow(
+    rank: Int,
+    grade: Int,
+    classNumber: Int,
+    totalScore: Int,
+    studentCount: Int,
+    color: Color,
+    isMyClass: Boolean = false
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(85.dp)
+            .clip(RoundedCornerShape(32.dp))
+            .background(if (isMyClass) Color(0xFFE3F2FD) else Color.White)
+            .border(
+                width = if (isMyClass) 2.dp else 0.dp,
+                color = if (isMyClass) Color(0xFF60B6C2) else Color.Transparent,
+                shape = RoundedCornerShape(32.dp)
+            )
+            .padding(horizontal = 20.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 순위 번호
+        Box(
+            modifier = Modifier
+                .size(23.dp)
+                .border(1.dp, Color(0xFFDADADA), shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("$rank", fontSize = 10.sp, color = Color.Gray)
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // 학급 표시 색상 원
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(color, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "$grade-$classNumber",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // 학급 정보와 점수
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${grade}학년 ${classNumber}반",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+                if (isMyClass) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "내 학급",
+                        fontSize = 11.sp,
+                        color = Color(0xFF60B6C2),
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .background(
+                                color = Color(0xFFE3F2FD),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("총점 ${totalScore}점", fontSize = 12.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("${studentCount}명", fontSize = 12.sp, color = Color.Gray)
+            }
+        }
+    }
+}
+
+@Composable
 fun LeaderboardRow(rank: Int, name: String, score: Int, color: Color, isMe: Boolean = false) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(85.dp)
             .clip(RoundedCornerShape(32.dp))
-            .background(Color.White)
+            .background(if (isMe) Color(0xFFE3F2FD) else Color.White)
+            .border(
+                width = if (isMe) 2.dp else 0.dp,
+                color = if (isMe) Color(0xFF60B6C2) else Color.Transparent,
+                shape = RoundedCornerShape(32.dp)
+            )
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -478,26 +794,27 @@ fun LeaderboardRow(rank: Int, name: String, score: Int, color: Color, isMe: Bool
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center
         ) {
-            Text(name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                if (isMe) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "나",
+                        fontSize = 11.sp,
+                        color = Color(0xFF60B6C2),
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .background(
+                                color = Color(0xFFE3F2FD),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
             Text("${score} points", fontSize = 12.sp, color = Color.Gray)
-        }
-
-        // 왕관 아이콘
-        Box(
-            modifier = Modifier
-                .background(
-                    color = if (isMe) Color(0xFFFFC107) else Color(0xFFF1F1F1),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .padding(6.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.EmojiEvents,
-                contentDescription = if (isMe) "내 등수" else null,
-                tint = if (isMe) Color.White else Color.LightGray,
-                modifier = Modifier.size(16.dp)
-            )
         }
     }
 }

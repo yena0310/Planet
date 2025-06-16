@@ -34,6 +34,7 @@ import com.example.planet.QuizItem
 import com.example.planet.QuizType
 import com.example.planet.R
 import com.example.planet.utils.RankingUtils
+import com.example.planet.utils.UserStateManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -48,22 +49,21 @@ fun QuizMatchingAnswerScreen(
     val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
 
     // Firebase
-    val auth = FirebaseAuth.getInstance()
-    val currentUser = auth.currentUser
+    val currentUserId = UserStateManager.getUserId()
     val db = FirebaseFirestore.getInstance()
 
     // 사용자 정보 상태
     var userScore by remember { mutableStateOf(0) }
-    var totalQuestions by remember { mutableStateOf(80) }
+    var totalQuestions by remember { mutableStateOf(100) }
     var isLoading by remember { mutableStateOf(true) }
     var scoreUpdated by remember { mutableStateOf(false) }
-// 🆕 전달받은 quizIds로 문제 찾기 (간단!)
+
+    // 🆕 전달받은 quizIds로 문제 찾기 (간단!)
     val currentQuizSet = remember(quizIds) {
         quizIds.mapNotNull { id ->
             quizList.find { it.id == id }
         }
     }
-
 
     // 🆕 정답 매칭 정보
     val correctPairs = remember(currentQuizSet) {
@@ -93,11 +93,11 @@ fun QuizMatchingAnswerScreen(
     LaunchedEffect(Unit) {
         Log.d("QuizMatchingAnswer", "매칭 해설 화면 초기화 - 인덱스: $index, 모든 매칭 정답 여부: $isAllCorrect")
 
-        currentUser?.let { user ->
-            Log.d("QuizMatchingAnswer", "사용자 UID: ${user.uid}")
+        currentUserId?.let { userId ->
+            Log.d("QuizMatchingAnswer", "사용자 UID: $userId")
 
             // 1. 현재 사용자 정보 가져오기
-            db.collection("users").document(user.uid).get()
+            db.collection("users").document(userId).get()
                 .addOnSuccessListener { userDoc ->
                     if (userDoc.exists()) {
                         val currentScore = userDoc.getLong("score")?.toInt() ?: 0
@@ -115,7 +115,7 @@ fun QuizMatchingAnswerScreen(
                             // 3. RankingUtils를 통한 점수 및 랭킹 업데이트
                             RankingUtils.updateUserScoreAndRanking(
                                 db = db,
-                                userId = user.uid,
+                                userId = userId,
                                 newScore = newScore,
                                 onSuccess = {
                                     userScore = newScore

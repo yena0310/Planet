@@ -44,6 +44,7 @@ import androidx.navigation.NavHostController
 import com.example.planet.R
 import com.example.planet.utils.RankingUtils
 import com.example.planet.utils.customShadow
+import com.example.planet.utils.UserStateManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -55,25 +56,24 @@ fun HomeScreen(navController: NavHostController) {
     val iconTint = Color(0xFF546A6E)
 
     // Firebase
-    val auth = FirebaseAuth.getInstance()
-    val currentUser = auth.currentUser
+    val currentUserId = UserStateManager.getUserId()
     val db = FirebaseFirestore.getInstance()
 
     // 사용자 정보 상태
     var userName by remember { mutableStateOf("로딩중...") }
     var userScore by remember { mutableStateOf(0) }
     var lastQuestionIndex by remember { mutableStateOf(1) }
-    var myRanking by remember { mutableStateOf(0) }
-    var schoolRanking by remember { mutableStateOf(0) }
+    var myRanking by remember { mutableStateOf(0) } // 학급 내 순위
+    var classRanking by remember { mutableStateOf(0) } // 학교 내 학급 순위
     var isLoading by remember { mutableStateOf(true) }
 
     // 사용자 정보 가져오기
     LaunchedEffect(Unit) {
         Log.d("HomeScreen", "사용자 정보 로드 시작")
-        currentUser?.let { user ->
-            Log.d("HomeScreen", "사용자 UID: ${user.uid}")
+        currentUserId?.let { userId ->
+            Log.d("HomeScreen", "사용자 UID: $userId")
 
-            db.collection("users").document(user.uid).get()
+            db.collection("users").document(userId).get()
                 .addOnSuccessListener { userDoc ->
                     Log.d("HomeScreen", "사용자 문서 존재: ${userDoc.exists()}")
                     if (userDoc.exists()) {
@@ -83,20 +83,21 @@ fun HomeScreen(navController: NavHostController) {
                         userName = userDoc.getString("name") ?: "이름 없음"
                         userScore = userDoc.getLong("score")?.toInt() ?: 0
                         lastQuestionIndex = userDoc.getLong("lastQuestionIndex")?.toInt() ?: 1
-                        myRanking = userDoc.getLong("ranking")?.toInt() ?: 0
 
-                        Log.d("HomeScreen", "사용자 정보 - 이름: $userName, 점수: $userScore, 마지막문제: $lastQuestionIndex, 랭킹: $myRanking")
+                        Log.d("HomeScreen", "사용자 정보 - 이름: $userName, 점수: $userScore, 마지막문제: $lastQuestionIndex")
 
-                        // 학교 랭킹 계산 (같은 학교 내에서의 순위)
-                        val schoolName = userDoc.getString("schoolName")
-                        if (schoolName != null) {
-                            RankingUtils.calculateSchoolRanking(db, schoolName, userScore) { ranking ->
-                                schoolRanking = ranking
-                                Log.d("HomeScreen", "학교 랭킹: $ranking")
-                            }
+                        // 1. 학급 내 순위 계산
+                        RankingUtils.loadClassRankings(db, userId) { rankings, userRank, userScoreFromRanking, percentile ->
+                            myRanking = userRank
+                            Log.d("HomeScreen", "학급 내 순위: $userRank")
                         }
 
-                        isLoading = false
+                        // 2. 학교 내 학급 순위 계산
+                        RankingUtils.loadSchoolClassRankings(db, userId) { classRankings, myClassRank, userScoreFromClass, percentile ->
+                            classRanking = myClassRank
+                            isLoading = false
+                            Log.d("HomeScreen", "학교 내 학급 순위: $myClassRank")
+                        }
                     } else {
                         Log.w("HomeScreen", "사용자 문서 없음")
                         userName = "정보 없음"
@@ -254,7 +255,7 @@ fun HomeScreen(navController: NavHostController) {
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "학교 순위",
+                        text = "학급 순위",
                         fontSize = 13.sp,
                         style = MaterialTheme.typography.bodyMedium,
                         fontFamily = pretendardbold,
@@ -262,7 +263,7 @@ fun HomeScreen(navController: NavHostController) {
                     )
                     Text(
                         text = if (isLoading) "로딩중"
-                        else if (schoolRanking > 0) "# $schoolRanking"
+                        else if (classRanking > 0) "# $classRanking"
                         else "순위 없음",
                         fontSize = 15.sp,
                         style = MaterialTheme.typography.titleLarge,

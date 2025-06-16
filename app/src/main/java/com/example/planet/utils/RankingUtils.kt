@@ -55,17 +55,17 @@ object RankingUtils {
             .addOnSuccessListener { userDoc ->
                 if (userDoc.exists()) {
                     val score = userDoc.getLong("score")?.toInt() ?: 0
-                    val totalQuestions = 400 // 80 * 5 챕터
+                    val totalQuestions = 100
                     Log.d("RankingUtils", "사용자 정보 - 점수: $score, 총문제: $totalQuestions")
                     onResult(score, totalQuestions)
                 } else {
                     Log.w("RankingUtils", "사용자 문서 없음")
-                    onResult(0, 400)
+                    onResult(0, 100)
                 }
             }
             .addOnFailureListener { e ->
                 Log.e("RankingUtils", "사용자 정보 조회 실패", e)
-                onResult(0, 400)
+                onResult(0, 100)
             }
     }
 
@@ -207,6 +207,111 @@ object RankingUtils {
     }
 
     /**
+     * 학교 내 학급별 랭킹 조회 (총점 순 정렬)
+     * @param db FirebaseFirestore 인스턴스
+     * @param currentUserId 현재 사용자 ID
+     * @param onResult 결과 콜백 (학급 랭킹 리스트, 내 학급 등수, 내 점수, 퍼센타일)
+     */
+    fun loadSchoolClassRankings(
+        db: FirebaseFirestore,
+        currentUserId: String,
+        onResult: (List<ClassRanking>, Int, Int, Int) -> Unit
+    ) {
+        Log.d("RankingUtils", "학급별 랭킹 로드 시작 - 사용자ID: $currentUserId")
+
+        // 1. 현재 사용자 정보 가져오기
+        db.collection("users").document(currentUserId).get()
+            .addOnSuccessListener { userDoc ->
+                if (userDoc.exists()) {
+                    val userClassId = userDoc.getDocumentReference("classId")
+                    val userScore = userDoc.getLong("score")?.toInt() ?: 0
+                    val userSchoolName = userDoc.getString("schoolName")
+
+                    if (userClassId != null && userSchoolName != null) {
+                        // 2. 같은 학교의 모든 사용자 가져오기
+                        db.collection("users")
+                            .whereEqualTo("schoolName", userSchoolName)
+                            .get()
+                            .addOnSuccessListener { documents ->
+                                Log.d("RankingUtils", "학교 사용자 수: ${documents.size()}")
+
+                                // 학급별로 그룹화하여 총점 계산
+                                val classScores = mutableMapOf<String, MutableList<Int>>()
+                                val classInfo = mutableMapOf<String, Pair<Int, Int>>() // grade, classNumber
+
+                                documents.forEach { document ->
+                                    val classRef = document.getDocumentReference("classId")
+                                    val score = document.getLong("score")?.toInt() ?: 0
+                                    val grade = document.getLong("grade")?.toInt() ?: 0
+                                    val classNum = document.getLong("classNum")?.toInt() ?: 0
+
+                                    classRef?.let { classId ->
+                                        val classIdStr = classId.path
+                                        if (!classScores.containsKey(classIdStr)) {
+                                            classScores[classIdStr] = mutableListOf()
+                                            classInfo[classIdStr] = Pair(grade, classNum)
+                                        }
+                                        classScores[classIdStr]?.add(score)
+                                    }
+                                }
+
+                                // 총점으로 학급 랭킹 생성
+                                val classRankings = classScores.map { (classId, scores) ->
+                                    val (grade, classNumber) = classInfo[classId] ?: Pair(0, 0)
+                                    val totalScore = if (scores.isNotEmpty()) scores.sum() else 0
+                                    val isCurrentClass = classId == userClassId.path
+
+                                    ClassRanking(
+                                        classId = classId,
+                                        grade = grade,
+                                        classNumber = classNumber,
+                                        totalScore = totalScore,
+                                        studentCount = scores.size,
+                                        rank = 0, // 임시값, 아래에서 설정
+                                        isCurrentClass = isCurrentClass
+                                    )
+                                }.sortedByDescending { it.totalScore }
+
+                                // 순위 매기기
+                                val rankedClassRankings = classRankings.mapIndexed { index, classData ->
+                                    classData.copy(rank = index + 1)
+                                }
+
+                                // 내 학급 순위 찾기
+                                val myClassRank = rankedClassRankings.find { it.isCurrentClass }?.rank ?: 1
+
+                                // 퍼센타일 계산
+                                val totalClasses = rankedClassRankings.size
+                                val percentileAhead = if (totalClasses > 1) {
+                                    ((totalClasses - myClassRank).toFloat() / (totalClasses - 1) * 100).toInt()
+                                } else {
+                                    100
+                                }
+
+                                Log.d("RankingUtils", "학급별 랭킹 완료 - 총 ${totalClasses}개 학급, 내 학급 순위: $myClassRank")
+
+                                onResult(rankedClassRankings, myClassRank, userScore, percentileAhead)
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("RankingUtils", "학교 사용자 로드 실패", e)
+                                onResult(emptyList(), 0, 0, 0)
+                            }
+                    } else {
+                        Log.w("RankingUtils", "사용자의 학급 또는 학교 정보가 없음")
+                        onResult(emptyList(), 0, 0, 0)
+                    }
+                } else {
+                    Log.w("RankingUtils", "사용자 문서가 존재하지 않음")
+                    onResult(emptyList(), 0, 0, 0)
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("RankingUtils", "사용자 정보 로드 실패", e)
+                onResult(emptyList(), 0, 0, 0)
+            }
+    }
+
+    /**
      * 전교 랭킹 계산 (점수 기준)
      * @param db FirebaseFirestore 인스턴스
      * @param userScore 사용자 점수
@@ -316,4 +421,17 @@ data class StudentRanking(
     val score: Int,
     val rank: Int,
     val isCurrentUser: Boolean = false
+)
+
+/**
+ * 학급 랭킹 데이터 클래스
+ */
+data class ClassRanking(
+    val classId: String,
+    val grade: Int,
+    val classNumber: Int,
+    val totalScore: Int,  // averageScore에서 totalScore로 변경
+    val studentCount: Int,
+    val rank: Int,
+    val isCurrentClass: Boolean = false
 )

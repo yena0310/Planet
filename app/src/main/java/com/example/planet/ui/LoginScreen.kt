@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.planet.R
+import com.example.planet.utils.UserStateManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -64,6 +65,7 @@ fun LoginScreen(navController: NavHostController) {
     LaunchedEffect(Unit) {
         Log.d("LoginScreen", "화면 초기화 시작")
 
+        // 1. 먼저 학교 목록 로드
         db.collection("schools").get()
             .addOnSuccessListener { result ->
                 schoolList = result.mapNotNull { it.getString("name") }
@@ -73,22 +75,49 @@ fun LoginScreen(navController: NavHostController) {
                 Log.e("LoginScreen", "학교 목록 로드 실패", e)
             }
 
-        currentUser?.let { user ->
-            Log.d("LoginScreen", "기존 사용자 확인: ${user.uid}")
-            db.collection("users").document(user.uid).get()
+        // 2. 저장된 사용자 확인 (SharedPreferences)
+        val savedUserId = UserStateManager.currentUserId
+        if (!savedUserId.isNullOrEmpty()) {
+            Log.d("LoginScreen", "저장된 사용자 발견: $savedUserId")
+            // 사용자 문서가 실제로 존재하는지 확인
+            db.collection("users").document(savedUserId).get()
                 .addOnSuccessListener { document ->
                     if (document.exists()) {
-                        Log.d("LoginScreen", "기존 사용자 발견, 홈으로 이동")
+                        Log.d("LoginScreen", "저장된 사용자 문서 확인 완료, 홈으로 이동")
                         navController.navigate("home") {
                             popUpTo("login") { inclusive = true }
                         }
                     } else {
-                        Log.d("LoginScreen", "기존 사용자이지만 정보 없음")
+                        Log.w("LoginScreen", "저장된 사용자 문서가 존재하지 않음, 로그인 유지")
+                        UserStateManager.clearUser() // 잘못된 정보 정리
                     }
                 }
                 .addOnFailureListener { e ->
-                    Log.e("LoginScreen", "사용자 확인 실패", e)
+                    Log.e("LoginScreen", "저장된 사용자 확인 실패", e)
                 }
+            return@LaunchedEffect
+        }
+
+        // 3. Firebase Auth 사용자 확인 (기존 로직)
+        currentUser?.let { user ->
+            Log.d("LoginScreen", "Firebase 사용자 확인: ${user.uid}")
+            db.collection("users").document(user.uid).get()
+                .addOnSuccessListener { document ->
+                    if (document.exists()) {
+                        Log.d("LoginScreen", "Firebase 사용자 발견, 홈으로 이동")
+                        UserStateManager.setUser(user.uid) // UserStateManager에도 설정
+                        navController.navigate("home") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    } else {
+                        Log.d("LoginScreen", "Firebase 사용자이지만 정보 없음")
+                    }
+                }
+                .addOnFailureListener { e ->
+                    Log.e("LoginScreen", "Firebase 사용자 확인 실패", e)
+                }
+        } ?: run {
+            Log.d("LoginScreen", "로그인된 사용자 없음, 로그인 화면 유지")
         }
     }
 
@@ -244,15 +273,60 @@ fun LoginScreen(navController: NavHostController) {
 
                         isLoading = true
 
-                        if (currentUser == null) {
-                            Log.d("LoginScreen", "익명 로그인 시작")
-                            // 익명 로그인 먼저
-                            auth.signInAnonymously()
-                                .addOnSuccessListener { result ->
-                                    val userId = result.user!!.uid
-                                    Log.d("LoginScreen", "익명 로그인 성공: $userId")
+                        // 1. 먼저 기존 사용자 찾기
+                        findExistingUser(
+                            db = db,
+                            schoolName = selectedSchool!!,
+                            grade = selectedGrade!!.toInt(),
+                            classNum = selectedClass!!.toInt(),
+                            name = name,
+                            onUserFound = { existingUserId ->
+                                Log.d("LoginScreen", "기존 사용자 발견: $existingUserId")
+                                // 앱 전체에서 사용할 사용자 상태 설정
+                                com.example.planet.utils.UserStateManager.setUser(existingUserId)
+                                isLoading = false
+                                navController.navigate("welcome/$existingUserId") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                            },
+                            onUserNotFound = {
+                                Log.d("LoginScreen", "기존 사용자 없음, 새 사용자 생성")
+                                // 2. 기존 사용자가 없으면 새로 생성
+                                if (currentUser == null) {
+                                    // 익명 로그인 후 새 계정 생성
+                                    auth.signInAnonymously()
+                                        .addOnSuccessListener { result ->
+                                            val userId = result.user!!.uid
+                                            Log.d("LoginScreen", "익명 로그인 성공: $userId")
 
-                                    // 사용자 문서 생성
+                                            createUserInFirestore(
+                                                userId = userId,
+                                                schoolName = selectedSchool!!,
+                                                grade = selectedGrade!!.toInt(),
+                                                classNum = selectedClass!!.toInt(),
+                                                name = name,
+                                                onSuccess = {
+                                                    // 앱 전체에서 사용할 사용자 상태 설정
+                                                    com.example.planet.utils.UserStateManager.setUser(userId)
+                                                    isLoading = false
+                                                    Log.d("LoginScreen", "새 사용자 생성 완료, welcome으로 이동")
+                                                    navController.navigate("welcome/$userId") {
+                                                        popUpTo("login") { inclusive = true }
+                                                    }
+                                                },
+                                                onFailure = { error ->
+                                                    isLoading = false
+                                                    Log.e("LoginScreen", "새 사용자 생성 실패: $error")
+                                                }
+                                            )
+                                        }
+                                        .addOnFailureListener { e ->
+                                            isLoading = false
+                                            Log.e("LoginScreen", "익명 로그인 실패", e)
+                                        }
+                                } else {
+                                    // 이미 로그인된 사용자의 경우
+                                    val userId = currentUser.uid
                                     createUserInFirestore(
                                         userId = userId,
                                         schoolName = selectedSchool!!,
@@ -260,63 +334,22 @@ fun LoginScreen(navController: NavHostController) {
                                         classNum = selectedClass!!.toInt(),
                                         name = name,
                                         onSuccess = {
+                                            // 앱 전체에서 사용할 사용자 상태 설정
+                                            com.example.planet.utils.UserStateManager.setUser(userId)
                                             isLoading = false
-                                            Log.d("LoginScreen", "사용자 생성 완료, welcome으로 이동")
-                                            navController.navigate("welcome") {
+                                            Log.d("LoginScreen", "새 사용자 생성 완료, welcome으로 이동")
+                                            navController.navigate("welcome/$userId") {
                                                 popUpTo("login") { inclusive = true }
                                             }
                                         },
                                         onFailure = { error ->
                                             isLoading = false
-                                            Log.e("LoginScreen", "사용자 생성 실패: $error")
+                                            Log.e("LoginScreen", "새 사용자 생성 실패: $error")
                                         }
                                     )
                                 }
-                                .addOnFailureListener { e ->
-                                    isLoading = false
-                                    Log.e("LoginScreen", "익명 로그인 실패", e)
-                                }
-                        } else {
-                            // 이미 로그인된 사용자의 경우, 사용자 문서가 있는지 확인
-                            val userId = currentUser.uid
-                            Log.d("LoginScreen", "이미 로그인된 사용자: $userId")
-
-                            db.collection("users").document(userId).get()
-                                .addOnSuccessListener { document ->
-                                    if (!document.exists()) {
-                                        Log.d("LoginScreen", "기존 사용자지만 문서 없음, 새로 생성")
-                                        // 문서가 없으면 새로 생성
-                                        createUserInFirestore(
-                                            userId = userId,
-                                            schoolName = selectedSchool!!,
-                                            grade = selectedGrade!!.toInt(),
-                                            classNum = selectedClass!!.toInt(),
-                                            name = name,
-                                            onSuccess = {
-                                                isLoading = false
-                                                Log.d("LoginScreen", "사용자 문서 생성 완료, welcome으로 이동")
-                                                navController.navigate("welcome") {
-                                                    popUpTo("login") { inclusive = true }
-                                                }
-                                            },
-                                            onFailure = { error ->
-                                                isLoading = false
-                                                Log.e("LoginScreen", "사용자 문서 생성 실패: $error")
-                                            }
-                                        )
-                                    } else {
-                                        isLoading = false
-                                        Log.d("LoginScreen", "기존 사용자 문서 발견, welcome으로 이동")
-                                        navController.navigate("welcome") {
-                                            popUpTo("login") { inclusive = true }
-                                        }
-                                    }
-                                }
-                                .addOnFailureListener { e ->
-                                    isLoading = false
-                                    Log.e("LoginScreen", "사용자 문서 확인 실패", e)
-                                }
-                        }
+                            }
+                        )
                     },
                     enabled = !isLoading && selectedSchool != null && selectedGrade != null
                             && selectedClass != null && name.isNotBlank(),
@@ -340,6 +373,47 @@ fun LoginScreen(navController: NavHostController) {
             }
         }
     }
+}
+
+// 기존 사용자 찾기 함수
+fun findExistingUser(
+    db: FirebaseFirestore,
+    schoolName: String,
+    grade: Int,
+    classNum: Int,
+    name: String,
+    onUserFound: (String) -> Unit,
+    onUserNotFound: () -> Unit
+) {
+    Log.d("FindUser", "기존 사용자 검색 시작: $schoolName, $grade, $classNum, $name")
+
+    db.collection("users")
+        .whereEqualTo("schoolName", schoolName)
+        .whereEqualTo("grade", grade)
+        .whereEqualTo("classNum", classNum)
+        .whereEqualTo("name", name)
+        .get()
+        .addOnSuccessListener { result ->
+            Log.d("FindUser", "검색 결과: ${result.size()}개")
+            if (!result.isEmpty) {
+                val existingUser = result.documents[0]
+                val existingUserId = existingUser.getString("userId")
+                if (existingUserId != null) {
+                    Log.d("FindUser", "기존 사용자 발견: $existingUserId")
+                    onUserFound(existingUserId)
+                } else {
+                    Log.w("FindUser", "사용자 문서는 있지만 userId가 없음")
+                    onUserNotFound()
+                }
+            } else {
+                Log.d("FindUser", "기존 사용자 없음")
+                onUserNotFound()
+            }
+        }
+        .addOnFailureListener { e ->
+            Log.e("FindUser", "기존 사용자 검색 실패", e)
+            onUserNotFound()
+        }
 }
 
 fun createUserInFirestore(
@@ -406,7 +480,7 @@ fun createUserInFirestore(
                                         Log.d("CreateUser", "사용자 데이터 저장 시작: $userData")
                                         db.collection("users").document(userId).set(userData)
                                             .addOnSuccessListener {
-                                                Log.d("CreateUser", "✅ 유저 저장 성공 (lastQuestionIndex: 0으로 초기화)")
+                                                Log.d("CreateUser", "✅ 유저 저장 성공 (lastQuestionIndex: 1로 초기화)")
                                                 onSuccess()
                                             }
                                             .addOnFailureListener { e ->

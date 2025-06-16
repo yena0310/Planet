@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.R
+import com.example.planet.utils.UserStateManager
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
@@ -187,7 +188,7 @@ fun SettingScreen(navController: NavHostController) {
                 .background(Color(0xFFE0E0E0))
         )
 
-                    // 로그아웃
+        // 로그아웃
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -195,6 +196,8 @@ fun SettingScreen(navController: NavHostController) {
                     Log.d("SettingScreen", "로그아웃 클릭")
                     // Firebase 로그아웃
                     auth.signOut()
+                    // UserStateManager 클리어
+                    UserStateManager.clearUser()
                     Log.d("SettingScreen", "로그아웃 완료, 로그인 화면으로 이동")
                     // 로그인 화면으로 이동하고 백스택 초기화
                     navController.navigate("login") {
