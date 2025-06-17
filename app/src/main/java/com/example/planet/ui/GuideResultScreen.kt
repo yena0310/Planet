@@ -140,15 +140,6 @@ fun GuideResultScreen(
                         fontFamily = pretendardsemibold,
                         textAlign = TextAlign.Center
                     )
-
-                    // 🔹 점수 추가 텍스트
-                    Text(
-                        text = "+ 10 P",
-                        fontSize = 16.sp,
-                        color = Color.Gray,
-                        fontFamily = pretendardsemibold,
-                        textAlign = TextAlign.Center
-                    )
                 }
             }
         }
