@@ -74,10 +74,24 @@ fun QuizMatchingAnswerScreen(
 
     // 정답 체크 (모든 매칭이 맞아야만 정답)
     val isAllCorrect = remember(matchedPairs, correctPairs) {
-        matchedPairs.size == correctPairs.size &&
+        Log.d("QuizMatchingAnswer", "=== 정답 체크 시작 ===")
+        Log.d("QuizMatchingAnswer", "매칭 개수: ${matchedPairs.size}, 정답 개수: ${correctPairs.size}")
+
+        val result = matchedPairs.size == correctPairs.size &&
                 matchedPairs.all { (question, userAnswer) ->
-                    correctPairs[question] == userAnswer
+                    val trimmedQuestion = question.trim()
+                    val trimmedUserAnswer = userAnswer.trim()
+                    val correctAnswer = correctPairs[trimmedQuestion]?.trim()
+
+                    Log.d("QuizMatchingAnswer", "비교: 질문='$trimmedQuestion'")
+                    Log.d("QuizMatchingAnswer", "사용자='$trimmedUserAnswer' vs 정답='$correctAnswer'")
+                    Log.d("QuizMatchingAnswer", "일치=${correctAnswer == trimmedUserAnswer}")
+
+                    correctAnswer == trimmedUserAnswer
                 }
+
+        Log.d("QuizMatchingAnswer", "최종 결과: $result")
+        result
     }
 
     // 틀린 문제들의 해설 수집
@@ -93,6 +107,17 @@ fun QuizMatchingAnswerScreen(
 
     // 점수 업데이트 로직
     LaunchedEffect(Unit) {
+        Log.d("QuizMatchingAnswer", "=== 전달받은 매칭 결과 ===")
+        matchedPairs.forEach { (question, userAnswer) ->
+            val correctAnswer = correctPairs[question.trim()]?.trim()
+            val isCorrect = correctAnswer == userAnswer.trim()
+            Log.d("QuizMatchingAnswer", "UI 표시: '$question' -> 사용자:'$userAnswer', 정답:'$correctAnswer', 맞음:$isCorrect")
+        }
+
+        Log.d("QuizMatchingAnswer", "=== 정답 쌍들 ===")
+        correctPairs.forEach { (q, a) ->
+            Log.d("QuizMatchingAnswer", "정답: '$q' -> '$a' (답안 길이: ${a.length})")
+        }
         Log.d("QuizMatchingAnswer", "매칭 해설 화면 초기화 - 인덱스: $index, 모든 매칭 정답 여부: $isAllCorrect")
 
         currentUserId?.let { userId ->
