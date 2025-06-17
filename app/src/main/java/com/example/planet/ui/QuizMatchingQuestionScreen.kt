@@ -92,8 +92,22 @@ fun QuizMatchingQuestionScreen(
     }
 
     val questions = remember { currentQuizSet.map { it.question } }
-    val answers = remember { currentQuizSet.map { it.correctAnswer }.shuffled() }
-    val correctPairs = remember { currentQuizSet.associate { it.question to it.correctAnswer } }
+    val answers = remember {
+        val answerList = currentQuizSet.map { it.correctAnswer }
+        Log.d("QuizMatching", "=== 원본 답안들 ===")
+        answerList.forEachIndexed { index, answer ->
+            Log.d("QuizMatching", "답안 $index: '$answer' (길이: ${answer.length})")
+        }
+        answerList.shuffled()
+    }
+    val correctPairs = remember {
+        val pairs = currentQuizSet.associate { it.question to it.correctAnswer }
+        Log.d("QuizMatching", "=== 정답 쌍들 ===")
+        pairs.forEach { (q, a) ->
+            Log.d("QuizMatching", "질문: '$q' -> 정답: '$a' (길이: ${a.length})")
+        }
+        pairs
+    }
 
     // 매칭 상태
     val matchedPairs = remember { mutableStateMapOf<String, String>() }
@@ -657,7 +671,17 @@ private fun handleAnswerClick(
             }
 
             // 새로운 매칭 생성
+            Log.d("QuizMatching", "=== 매칭 생성 전 ===")
+            Log.d("QuizMatching", "선택된 질문: '$selectedQuestion' (길이: ${selectedQuestion.length})")
+            Log.d("QuizMatching", "선택된 답안: '$answer' (길이: ${answer.length})")
+
             matchedPairs[selectedQuestion] = answer
+
+            Log.d("QuizMatching", "=== 매칭 생성 후 ===")
+            matchedPairs.forEach { (q, a) ->
+                Log.d("QuizMatching", "저장된: '$q' -> '$a'")
+            }
+            //Log.d("QuizMatching", "매칭 생성: '${selectedQuestion.trim()}' -> '${answer.trim()}'")
             onSelectedQuestionChange(null)
             onUpdateLines()
         }
@@ -690,7 +714,16 @@ private suspend fun handleMatchingComplete(
     index: Int
 ) {
     val correctCount = matchedPairs.count { (question, answer) ->
-        correctPairs[question] == answer
+        val trimmedQuestion = question.trim()
+        val trimmedAnswer = answer.trim()
+        val correctAnswer = correctPairs[trimmedQuestion]?.trim()
+
+        Log.d("QuizMatching", "문제: '$trimmedQuestion'")
+        Log.d("QuizMatching", "사용자 답안: '$trimmedAnswer'")
+        Log.d("QuizMatching", "정답: '$correctAnswer'")
+        Log.d("QuizMatching", "일치 여부: ${correctAnswer == trimmedAnswer}")
+
+        correctAnswer == trimmedAnswer
     }
 
     if (BuildConfig.DEBUG) {
@@ -700,7 +733,7 @@ private suspend fun handleMatchingComplete(
     delay(QuizConstants.NAVIGATION_DELAY)
 
     withContext(Dispatchers.Main) {
-        val matchingResults = matchedPairs.entries.joinToString(",") { (q, a) ->
+        val matchingResults = matchedPairs.entries.joinToString("|||PAIR|||") { (q, a) ->
             "${q}${QuizConstants.URL_SEPARATOR}${a}"
         }
         val encodedResults = java.net.URLEncoder.encode(matchingResults, "UTF-8")

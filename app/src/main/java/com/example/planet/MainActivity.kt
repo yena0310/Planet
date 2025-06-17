@@ -218,7 +218,7 @@ class MainActivity : ComponentActivity() {
                                 val matchedPairs = if (resultsString.isNotBlank()) {
                                     try {
                                         val decoded = java.net.URLDecoder.decode(resultsString, "UTF-8")
-                                        decoded.split(",").associate { pair ->
+                                        decoded.split("|||PAIR|||").associate { pair ->
                                             val parts = pair.split("|||")
                                             if (parts.size == 2) {
                                                 parts[0] to parts[1]
