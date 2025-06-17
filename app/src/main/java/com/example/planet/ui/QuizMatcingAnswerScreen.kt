@@ -5,7 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,19 +60,19 @@ fun QuizMatchingAnswerScreen(
     var isLoading by remember { mutableStateOf(true) }
     var scoreUpdated by remember { mutableStateOf(false) }
 
-    // 🆕 전달받은 quizIds로 문제 찾기 (간단!)
+    // 전달받은 quizIds로 문제 찾기
     val currentQuizSet = remember(quizIds) {
         quizIds.mapNotNull { id ->
             quizList.find { it.id == id }
         }
     }
 
-    // 🆕 정답 매칭 정보
+    // 정답 매칭 정보
     val correctPairs = remember(currentQuizSet) {
         currentQuizSet.associate { it.question to it.correctAnswer }
     }
 
-    // 🆕 정답 체크 (모든 매칭이 맞아야만 정답)
+    // 정답 체크 (모든 매칭이 맞아야만 정답)
     val isAllCorrect = remember(matchedPairs, correctPairs) {
         matchedPairs.size == correctPairs.size &&
                 matchedPairs.all { (question, userAnswer) ->
@@ -78,7 +80,7 @@ fun QuizMatchingAnswerScreen(
                 }
     }
 
-    // 🆕 틀린 문제들의 해설 수집
+    // 틀린 문제들의 해설 수집
     val wrongExplanations = remember(matchedPairs, correctPairs) {
         matchedPairs.mapNotNull { (question, userAnswer) ->
             val correctAnswer = correctPairs[question]
@@ -89,14 +91,13 @@ fun QuizMatchingAnswerScreen(
         }
     }
 
-    // 🆕 기존 해설 페이지와 동일한 점수 로직 (정답 10점, 오답 5점)
+    // 점수 업데이트 로직
     LaunchedEffect(Unit) {
         Log.d("QuizMatchingAnswer", "매칭 해설 화면 초기화 - 인덱스: $index, 모든 매칭 정답 여부: $isAllCorrect")
 
         currentUserId?.let { userId ->
             Log.d("QuizMatchingAnswer", "사용자 UID: $userId")
 
-            // 1. 현재 사용자 정보 가져오기
             db.collection("users").document(userId).get()
                 .addOnSuccessListener { userDoc ->
                     if (userDoc.exists()) {
@@ -105,14 +106,12 @@ fun QuizMatchingAnswerScreen(
 
                         Log.d("QuizMatchingAnswer", "현재 점수: $currentScore")
 
-                        // 2. 점수 계산 및 업데이트 (기존과 동일한 로직)
                         if (!scoreUpdated) {
                             val pointsToAdd = if (isAllCorrect) 10 else 5
                             val newScore = currentScore + pointsToAdd
 
                             Log.d("QuizMatchingAnswer", "점수 업데이트 - 추가점수: $pointsToAdd, 새점수: $newScore")
 
-                            // 3. RankingUtils를 통한 점수 및 랭킹 업데이트
                             RankingUtils.updateUserScoreAndRanking(
                                 db = db,
                                 userId = userId,
@@ -151,6 +150,7 @@ fun QuizMatchingAnswerScreen(
             .fillMaxSize()
             .background(Color(0xFF7AC5D3))
     ) {
+        // 흰색 카드 영역
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -160,229 +160,243 @@ fun QuizMatchingAnswerScreen(
                 .background(Color.White)
                 .height(800.dp)
         ) {
-
-            // 상단바 (기존과 동일)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .align(Alignment.TopCenter),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(onClick = {
-                    navController.navigate("quiz") {
-                        popUpTo("quiz") { inclusive = false }
-                        launchSingleTop = true
-                    }
-                }) {
-                    Icon(
-                        imageVector = Icons.Rounded.ArrowBackIosNew,
-                        modifier = Modifier.size(25.dp),
-                        tint = Color.Gray,
-                        contentDescription = "뒤로 가기"
-                    )
-                }
-
-                Text(
-                    text = "${index + 1} / $totalQuestions",
-                    fontSize = 18.sp,
-                    color = Color.Black,
-                    fontFamily = pretendardsemibold
-                )
-
-                Text(
-                    text = if (isLoading) "로딩..." else "$userScore P",
-                    fontSize = 13.sp,
-                    color = if (scoreUpdated && !isLoading) Color(0xFF4CAF50) else Color.Gray,
-                    fontFamily = pretendardsemibold
-                )
-            }
-
-            // 🆕 매칭 결과 영역 (2x2 그리드)
             Column(
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(horizontal = 20.dp, vertical = 100.dp)
-                    .heightIn(max = 250.dp)
+                    .fillMaxSize()
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
-                val matchingList = matchedPairs.toList()
+                // 상단바 (백버튼, 문제수, 점수)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(onClick = {
+                        navController.navigate("quiz") {
+                            popUpTo("quiz") { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Rounded.ArrowBackIosNew,
+                            modifier = Modifier.size(25.dp),
+                            tint = Color.Gray,
+                            contentDescription = "뒤로 가기"
+                        )
+                    }
 
-                // 2x2 그리드로 배치
-                for (rowIndex in 0 until 2) {
+                    Text(
+                        text = "${index + 1} / $totalQuestions",
+                        fontSize = 18.sp,
+                        color = Color.Black,
+                        fontFamily = pretendardsemibold
+                    )
+
+                    Text(
+                        text = if (isLoading) "로딩..." else "$userScore P",
+                        fontSize = 13.sp,
+                        color = if (scoreUpdated && !isLoading) Color(0xFF4CAF50) else Color.Gray,
+                        fontFamily = pretendardsemibold
+                    )
+                }
+                // 결과 제목 + 다음 문제 버튼 한 줄로
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // 다음 문제 버튼
                     Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        for (colIndex in 0 until 2) {
-                            val itemIndex = rowIndex * 2 + colIndex
-                            if (itemIndex < matchingList.size) {
-                                val (question, userAnswer) = matchingList[itemIndex]
-                                val correctAnswer = correctPairs[question]
-                                val isCorrect = correctAnswer == userAnswer
-
-                                Column(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(2.dp)
-                                ) {
-                                    // 질문 박스
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(30.dp)
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(
-                                                if (isCorrect) Color(0xFFE8F5E8)
-                                                else Color(0xFFFFEBEE)
-                                            )
-                                            .border(
-                                                1.dp,
-                                                if (isCorrect) Color(0xFF4CAF50)
-                                                else Color(0xFFE57373),
-                                                RoundedCornerShape(6.dp)
-                                            )
-                                            .padding(4.dp)
-                                    ) {
-                                        Text(
-                                            text = question,
-                                            fontSize = 8.sp,
-                                            fontFamily = pretendardsemibold,
-                                            color = Color.Black,
-                                            textAlign = TextAlign.Center,
-                                            modifier = Modifier.align(Alignment.Center),
-                                            maxLines = 2
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.height(2.dp))
-
-                                    // 답안 박스
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(40.dp)
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color(0xFFF5F5F5))
-                                            .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(6.dp))
-                                            .padding(4.dp)
-                                    ) {
-                                        Text(
-                                            text = userAnswer,
-                                            fontSize = 7.sp,
-                                            fontFamily = pretendardsemibold,
-                                            color = Color(0xFF666666),
-                                            textAlign = TextAlign.Center,
-                                            modifier = Modifier.align(Alignment.Center),
-                                            maxLines = 3
-                                        )
-                                    }
+                            .clickable {
+                                val nextIndex = index + 1
+                                Log.d("QuizAnswer", "다음 문제 클릭 - 다음 인덱스: $nextIndex")
+                                if (nextIndex < quizList.size) {
+                                    navController.navigate("quiz_question/$nextIndex")
+                                } else {
+                                    Log.d("QuizAnswer", "마지막 문제 완료, 퀴즈 메인으로 이동")
+                                    navController.navigate("quiz")
                                 }
-                            }
-                        }
+                            },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (index + 1 >= quizList.size) "완료" else "다음 문제",
+                            fontSize = 12.sp,
+                            fontFamily = pretendardsemibold,
+                            color = Color(0xFF585858)
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
+                            contentDescription = "다음 문제",
+                            modifier = Modifier.padding(start = 4.dp),
+                            tint = Color(0xFF585858)
+                        )
                     }
                 }
-            }
 
-            // 다음 문제 버튼 (기존과 동일)
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 200.dp, end = 30.dp)
-                    .clickable {
-                        val nextIndex = index + 1
-                        Log.d("QuizMatchingAnswer", "다음 문제 클릭 - 다음 인덱스: $nextIndex")
-                        if (nextIndex < quizList.size) {
-                            navController.navigate("quiz_question/$nextIndex")
-                        } else {
-                            Log.d("QuizMatchingAnswer", "마지막 문제 완료, 퀴즈 메인으로 이동")
-                            navController.navigate("quiz")
-                        }
-                    },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+
+                // 결과 제목
                 Text(
-                    text = if (index + 1 >= quizList.size) "완료" else "다음 문제",
-                    fontSize = 12.sp,
+                    text = if (isAllCorrect) "정답입니다!" else "아쉬워요!",
+                    fontSize = 24.sp,
                     fontFamily = pretendardsemibold,
-                    color = Color(0xFF585858)
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
-                    contentDescription = "다음 문제",
-                    modifier = Modifier.padding(start = 4.dp),
-                    tint = Color(0xFF585858)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 해설 영역 (기존과 동일한 스타일)
-            Column(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(y = 70.dp)
-                    .fillMaxWidth(0.80f)
-                    .height(350.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFFF9F6F2))
-                    .padding(29.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = if (isAllCorrect) "정답!" else "오답!",
-                    fontSize = 22.sp,
-                    fontFamily = pretendardsemibold,
-                    color = Color.Black
+                    color = Color.Black,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                Icon(
-                    imageVector = if (isAllCorrect) Icons.Outlined.CheckCircle else Icons.Default.Close,
-                    contentDescription = "결과 아이콘",
-                    tint = if (isAllCorrect) Color(0xFFE56A6A) else Color(0xFF4A75E1),
-                    modifier = Modifier.size(70.dp)
-                )
+                // 결과 아이콘
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isAllCorrect) Icons.Outlined.CheckCircle else Icons.Default.Close,
+                        contentDescription = "결과 아이콘",
+                        tint = if (isAllCorrect) Color(0xFF4CAF50) else Color(0xFFE53935),
+                        modifier = Modifier.size(80.dp)
+                    )
+                }
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // 🆕 점수 획득 표시 (기존과 동일한 로직)
+                // 점수 획득 표시
                 Text(
                     text = if (isAllCorrect) "+10점 획득!" else "+5점 획득!",
-                    fontSize = 16.sp,
+                    fontSize = 18.sp,
                     fontFamily = pretendardsemibold,
-                    color = if (isAllCorrect) Color(0xFF4CAF50) else Color(0xFF2196F3)
+                    color = if (isAllCorrect) Color(0xFF4CAF50) else Color(0xFF2196F3),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                // 🆕 결과별 메시지
-                if (isAllCorrect) {
-                    Text(
-                        text = "모두 올바르게 연결했습니다!",
-                        fontSize = 13.sp,
-                        fontFamily = pretendardsemibold,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center
-                    )
-                } else {
-                    // 🆕 틀린 문제들의 해설 표시
-                    Column {
-                        wrongExplanations.forEach { explanation ->
+                // 매칭 결과 제목
+                Text(
+                    text = "매칭 결과",
+                    fontSize = 20.sp,
+                    fontFamily = pretendardsemibold,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                // 매칭 결과 리스트
+                matchedPairs.forEach { (question, userAnswer) ->
+                    val correctAnswer = correctPairs[question]
+                    val isCorrect = correctAnswer == userAnswer
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isCorrect) Color(0xFFE8F5E8) else Color(0xFFFFEBEE)
+                            )
+                            .border(
+                                2.dp,
+                                if (isCorrect) Color(0xFF4CAF50) else Color(0xFFE53935),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(16.dp)
+                    ) {
+                        // 질문
+                        Text(
+                            text = "문제: $question",
+                            fontSize = 14.sp,
+                            fontFamily = pretendardsemibold,
+                            color = Color.Black,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        // 사용자 답안
+                        Text(
+                            text = "선택한 답: $userAnswer",
+                            fontSize = 14.sp,
+                            fontFamily = pretendardsemibold,
+                            color = if (isCorrect) Color(0xFF4CAF50) else Color(0xFFE53935)
+                        )
+
+                        // 정답 (틀렸을 때만 표시)
+                        if (!isCorrect) {
                             Text(
-                                text = explanation,
-                                fontSize = 11.sp,
+                                text = "정답: $correctAnswer",
+                                fontSize = 14.sp,
                                 fontFamily = pretendardsemibold,
-                                color = Color.Black,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(vertical = 2.dp)
+                                color = Color(0xFF4CAF50),
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+
+                        // 결과 표시
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = if (isCorrect) Icons.Outlined.CheckCircle else Icons.Default.Close,
+                                contentDescription = if (isCorrect) "정답" else "오답",
+                                tint = if (isCorrect) Color(0xFF4CAF50) else Color(0xFFE53935),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isCorrect) "정답" else "오답",
+                                fontSize = 12.sp,
+                                fontFamily = pretendardsemibold,
+                                color = if (isCorrect) Color(0xFF4CAF50) else Color(0xFFE53935)
                             )
                         }
                     }
                 }
+
+                // 해설 영역 (틀린 문제가 있을 때만)
+                if (wrongExplanations.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = "해설",
+                        fontSize = 20.sp,
+                        fontFamily = pretendardsemibold,
+                        color = Color.Black,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    wrongExplanations.forEach { explanation ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFF5F5F5))
+                                .padding(12.dp)
+                        ) {
+                            Text(
+                                text = explanation,
+                                fontSize = 14.sp,
+                                fontFamily = pretendardsemibold,
+                                color = Color.Black,
+                                lineHeight = 20.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(80.dp)) // 다음 버튼 공간
             }
         }
     }

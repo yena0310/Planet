@@ -23,7 +23,10 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -36,11 +39,39 @@ import com.example.planet.QuizType
 import com.example.planet.R
 import com.example.planet.utils.RankingUtils
 import com.example.planet.utils.UserStateManager
-import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.BuildConfig
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+// 상수 정의
+private object QuizConstants {
+    val QUIZ_CONTAINER_HEIGHT = 800.dp
+    val QUESTION_BOX_WIDTH = 140.dp
+    val ANSWER_BOX_WIDTH = 150.dp
+    val BOX_HEIGHT = 50.dp
+    val SPACING = 20.dp
+    val CORNER_RADIUS = 12.dp
+    val DOT_SIZE = 6.dp
+    val LINE_STROKE_WIDTH = 4f
+    val LINE_OFFSET_X = 20f
+
+    const val QUESTIONS_PER_ROUND = 4
+    const val NAVIGATION_DELAY = 500L
+    const val URL_SEPARATOR = "|||"
+}
+
+// UI 상태 데이터 클래스
+data class QuizUiState(
+    val userScore: Int = 0,
+    val totalQuestions: Int = 100,
+    val isLoading: Boolean = true,
+    val selectedQuestion: String? = null,
+    val matchedPairs: Map<String, String> = emptyMap(),
+    val hasError: Boolean = false,
+    val errorMessage: String = ""
+)
 
 @Composable
 fun QuizMatchingQuestionScreen(
@@ -48,195 +79,116 @@ fun QuizMatchingQuestionScreen(
     quizList: List<QuizItem>,
     index: Int
 ) {
-    val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
     val context = LocalContext.current
-
-    // Firebase
-    val currentUserId = UserStateManager.getUserId()
     val db = FirebaseFirestore.getInstance()
+    val currentUserId = UserStateManager.getUserId()
 
-    // 사용자 정보 상태
-    var userScore by remember { mutableStateOf(0) }
-    var totalQuestions by remember { mutableStateOf(100) }
-    var isLoading by remember { mutableStateOf(true) }
+    // UI 상태 관리
+    var uiState by remember { mutableStateOf(QuizUiState()) }
 
-    // 🆕 이미 푼 문제 제외하고 새로운 4개 가져오기
+    // 퀴즈 데이터 준비
     val currentQuizSet = remember(index) {
-        val matchingQuizzes = quizList.filter { it.type == QuizType.MATCHING }
-        val matchingRoundCount = quizList.take(index).count { it.type == QuizType.MATCHING }
-        val startIndex = matchingRoundCount * 4
-        val endIndex = minOf(startIndex + 4, matchingQuizzes.size)
-
-        if (startIndex < matchingQuizzes.size) {
-            matchingQuizzes.subList(startIndex, endIndex)
-        } else {
-            emptyList()
-        }
+        prepareQuizSet(quizList, index)
     }
 
-    // 🆕 매칭 관련 상태 - 수정된 부분
-    val questions = remember {
-        currentQuizSet.map { it.question } // 4개 퀴즈의 질문들
-    }
-    val answers = remember {
-        currentQuizSet.map { it.correctAnswer }.shuffled() // 4개 퀴즈의 답안들을 섞음
-    }
+    val questions = remember { currentQuizSet.map { it.question } }
+    val answers = remember { currentQuizSet.map { it.correctAnswer }.shuffled() }
+    val correctPairs = remember { currentQuizSet.associate { it.question to it.correctAnswer } }
 
-    // 🆕 정답 매칭 정보 저장
-    val correctPairs = remember {
-        currentQuizSet.associate { it.question to it.correctAnswer }
-    }
-
-    var selectedQuestion by remember { mutableStateOf<String?>(null) }
-    val matchedPairs = remember { mutableStateMapOf<String, String>() } // question -> answer
+    // 매칭 상태
+    val matchedPairs = remember { mutableStateMapOf<String, String>() }
     val questionDotCoords = remember { mutableMapOf<String, Offset>() }
     val answerDotCoords = remember { mutableMapOf<String, Offset>() }
     val matchedLines = remember { mutableStateListOf<Pair<Offset, Offset>>() }
     val rootCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
 
-    // 선 업데이트 함수
-    fun updateLines() {
-        matchedLines.clear()
-        matchedPairs.forEach { (question, answer) ->
-            val startRaw = questionDotCoords[question]
-            val endRaw = answerDotCoords[answer]
-            val start = startRaw?.copy(x = startRaw.x - 45.5f)
-            val end = endRaw?.copy(x = endRaw.x + 14.5f)
-            if (start != null && end != null) {
-                matchedLines.add(Pair(start, end))
-            }
-        }
-    }
-
-    // 사용자 정보 및 lastQuestionIndex 업데이트
+    // 초기화
     LaunchedEffect(Unit) {
-        Log.d("QuizMatching", "매칭 문제 화면 초기화 - 인덱스: $index")
-
-        currentUserId?.let { userId ->
-            Log.d("QuizMatching", "사용자 UID: $userId")
-
-            // 1. 사용자 정보 가져오기
-            RankingUtils.getUserQuizInfo(db, userId) { score, total ->
-                userScore = score
-                totalQuestions = total
-                isLoading = false
-                Log.d("QuizMatching", "사용자 정보 로드 완료 - 점수: $score")
-            }
-
-            // 2. lastQuestionIndex 업데이트 (현재 문제 + 1)
-            val nextQuestionIndex = index + 1
-            RankingUtils.updateLastQuestionIndex(db, userId, nextQuestionIndex)
-
-            // 3. SharedPreferences 업데이트 (기존 방식 유지)
-            context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
-                .edit()
-                .putInt("last_index", nextQuestionIndex)
-                .apply()
-        } ?: run {
-            Log.w("QuizMatching", "로그인되지 않은 사용자")
-            isLoading = false
-        }
+        initializeQuiz(
+            context = context,
+            db = db,
+            currentUserId = currentUserId,
+            index = index,
+            onStateUpdate = { newState -> uiState = newState }
+        )
     }
 
-    // 🆕 매칭 완료 체크 (4개 모두 매칭되면 해설 창으로) - 상세 로그 추가
+    // 매칭 완료 체크
     LaunchedEffect(matchedPairs.size) {
-        if (matchedPairs.size == questions.size) { // 4개가 됨
-            Log.d("QuizMatching", "=====================================")
-            Log.d("QuizMatching", "🎯 모든 매칭 완료! 결과 분석 시작")
-            Log.d("QuizMatching", "=====================================")
-
-            // 🆕 상세한 매칭 결과 분석
-            var correctCount = 0
-            var totalQuestions = questions.size
-
-            Log.d("QuizMatching", "📋 전체 정답 정보:")
-            correctPairs.forEach { (question, correctAnswer) ->
-                Log.d("QuizMatching", "   Q: $question")
-                Log.d("QuizMatching", "   A: $correctAnswer")
-                Log.d("QuizMatching", "   ---")
-            }
-
-            Log.d("QuizMatching", "")
-            Log.d("QuizMatching", "👤 사용자 매칭 결과:")
-
-            matchedPairs.forEach { (userQuestion, userAnswer) ->
-                val correctAnswer = correctPairs[userQuestion]
-                val isCorrect = userAnswer == correctAnswer
-
-                if (isCorrect) {
-                    correctCount++
-                    Log.d("QuizMatching", "✅ 정답!")
-                } else {
-                    Log.d("QuizMatching", "❌ 오답!")
-                }
-
-                Log.d("QuizMatching", "   질문: $userQuestion")
-                Log.d("QuizMatching", "   사용자 선택: $userAnswer")
-                Log.d("QuizMatching", "   정답: $correctAnswer")
-                Log.d("QuizMatching", "   결과: ${if (isCorrect) "맞음" else "틀림"}")
-                Log.d("QuizMatching", "   ---")
-            }
-
-            Log.d("QuizMatching", "")
-            Log.d("QuizMatching", "📊 최종 결과:")
-            Log.d("QuizMatching", "   총 문제 수: $totalQuestions")
-            Log.d("QuizMatching", "   정답 개수: $correctCount")
-            Log.d("QuizMatching", "   오답 개수: ${totalQuestions - correctCount}")
-            Log.d("QuizMatching", "   정답률: ${(correctCount * 100) / totalQuestions}%")
-
-            // 🆕 매칭이 제대로 되었는지 검증
-            if (matchedPairs.size == correctPairs.size) {
-                Log.d("QuizMatching", "✅ 매칭 개수 검증: 통과 (${matchedPairs.size}/${correctPairs.size})")
-            } else {
-                Log.e("QuizMatching", "❌ 매칭 개수 오류: ${matchedPairs.size}/${correctPairs.size}")
-            }
-
-            // 🆕 중복 매칭 검사
-            val uniqueQuestions = matchedPairs.keys.toSet()
-            val uniqueAnswers = matchedPairs.values.toSet()
-
-            if (uniqueQuestions.size == matchedPairs.size && uniqueAnswers.size == matchedPairs.size) {
-                Log.d("QuizMatching", "✅ 중복 검사: 통과 (질문 ${uniqueQuestions.size}개, 답안 ${uniqueAnswers.size}개)")
-            } else {
-                Log.e("QuizMatching", "❌ 중복 매칭 발견!")
-                Log.e("QuizMatching", "   질문 중복: ${matchedPairs.size - uniqueQuestions.size}개")
-                Log.e("QuizMatching", "   답안 중복: ${matchedPairs.size - uniqueAnswers.size}개")
-            }
-
-            // 🆕 성과 분석
-            when (correctCount) {
-                totalQuestions -> Log.d("QuizMatching", "🏆 완벽! 모든 문제를 맞혔습니다!")
-                in (totalQuestions * 0.8).toInt()..totalQuestions -> Log.d("QuizMatching", "🎉 우수! 대부분의 문제를 맞혔습니다!")
-                in (totalQuestions * 0.5).toInt() until (totalQuestions * 0.8).toInt() -> Log.d("QuizMatching", "👍 보통! 절반 이상 맞혔습니다!")
-                else -> Log.d("QuizMatching", "💪 분발! 더 열심히 공부해보세요!")
-            }
-
-            Log.d("QuizMatching", "=====================================")
-            Log.d("QuizMatching", "🚀 다음 화면으로 이동 준비 중...")
-            Log.d("QuizMatching", "=====================================")
-
-            delay(1000)
-
-            // 🆕 메인 스레드에서 Navigation 실행
-            withContext(Dispatchers.Main) {
-                // 🆕 매칭 결과를 URL 파라미터로 전달
-                val matchingResults = matchedPairs.entries.joinToString(",") { (q, a) ->
-                    "${q}|||${a}" // |||로 구분 (쉼표나 콜론이 문제 내용에 있을 수 있어서)
-                }
-                val encodedResults = java.net.URLEncoder.encode(matchingResults, "UTF-8")
-
-                val quizIds = currentQuizSet.map { it.id }.joinToString(",")
-                val encodedQuizIds = java.net.URLEncoder.encode(quizIds, "UTF-8")
-
-                navController.navigate("quiz_matching_answer/${index}?results=${encodedResults}&quizIds=${encodedQuizIds}")
-            }
+        if (matchedPairs.size == questions.size) {
+            handleMatchingComplete(
+                matchedPairs = matchedPairs.toMap(),
+                correctPairs = correctPairs,
+                currentQuizSet = currentQuizSet,
+                navController = navController,
+                index = index
+            )
         }
     }
 
-    // 좌표 변경 시 선 업데이트
+    // 선 업데이트
     LaunchedEffect(questionDotCoords.size, answerDotCoords.size) {
-        updateLines()
+        updateLines(matchedPairs, questionDotCoords, answerDotCoords, matchedLines)
     }
+
+    QuizMatchingContent(
+        uiState = uiState,
+        questions = questions,
+        answers = answers,
+        matchedPairs = matchedPairs,
+        selectedQuestion = uiState.selectedQuestion,
+        matchedLines = matchedLines,
+        rootCoords = rootCoords,
+        questionDotCoords = questionDotCoords,
+        answerDotCoords = answerDotCoords,
+        index = index,
+        navController = navController,
+        onQuestionClick = { question ->
+            handleQuestionClick(
+                question = question,
+                selectedQuestion = uiState.selectedQuestion,
+                matchedPairs = matchedPairs,
+                onSelectedQuestionChange = { newSelection ->
+                    uiState = uiState.copy(selectedQuestion = newSelection)
+                },
+                onUpdateLines = {
+                    updateLines(matchedPairs, questionDotCoords, answerDotCoords, matchedLines)
+                }
+            )
+        },
+        onAnswerClick = { answer ->
+            handleAnswerClick(
+                answer = answer,
+                selectedQuestion = uiState.selectedQuestion,
+                matchedPairs = matchedPairs,
+                onSelectedQuestionChange = { newSelection ->
+                    uiState = uiState.copy(selectedQuestion = newSelection)
+                },
+                onUpdateLines = {
+                    updateLines(matchedPairs, questionDotCoords, answerDotCoords, matchedLines)
+                }
+            )
+        }
+    )
+}
+
+@Composable
+private fun QuizMatchingContent(
+    uiState: QuizUiState,
+    questions: List<String>,
+    answers: List<String>,
+    matchedPairs: Map<String, String>,
+    selectedQuestion: String?,
+    matchedLines: List<Pair<Offset, Offset>>,
+    rootCoords: MutableState<LayoutCoordinates?>,
+    questionDotCoords: MutableMap<String, Offset>,
+    answerDotCoords: MutableMap<String, Offset>,
+    index: Int,
+    navController: NavHostController,
+    onQuestionClick: (String) -> Unit,
+    onAnswerClick: (String) -> Unit
+) {
+    val pretendardsemibold = FontFamily(Font(R.font.pretendardsemibold))
 
     Box(
         modifier = Modifier
@@ -244,9 +196,7 @@ fun QuizMatchingQuestionScreen(
             .background(Color(0xFF7AC5D3))
             .onGloballyPositioned { rootCoords.value = it }
     ) {
-        val lineOffsetX = 20f
-
-        // 선을 제일 위에 그리기 위한 Canvas
+        // 연결선 그리기
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
@@ -255,9 +205,9 @@ fun QuizMatchingQuestionScreen(
             matchedLines.forEach { (start, end) ->
                 drawLine(
                     color = Color.Black,
-                    start = start.copy(x = start.x + lineOffsetX),
-                    end = end.copy(x = end.x - lineOffsetX),
-                    strokeWidth = 4f
+                    start = start.copy(x = start.x + QuizConstants.LINE_OFFSET_X),
+                    end = end.copy(x = end.x - QuizConstants.LINE_OFFSET_X),
+                    strokeWidth = QuizConstants.LINE_STROKE_WIDTH
                 )
             }
         }
@@ -269,211 +219,495 @@ fun QuizMatchingQuestionScreen(
                 .align(Alignment.BottomCenter)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                 .background(Color.White)
-                .height(800.dp)
+                .height(QuizConstants.QUIZ_CONTAINER_HEIGHT)
         ) {
             Column {
-                // 상단 바
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    IconButton(onClick = {
-                        navController.navigate("quiz")
-                    }) {
-                        Icon(
-                            imageVector = Icons.Rounded.ArrowBackIosNew,
-                            modifier = Modifier.size(25.dp),
-                            tint = Color.Gray,
-                            contentDescription = "뒤로 가기"
-                        )
-                    }
-
-                    Text(
-                        text = "${index + 1} / $totalQuestions",
-                        fontSize = 18.sp,
-                        fontFamily = pretendardsemibold
-                    )
-
-                    Text(
-                        text = if (isLoading) "로딩..." else "$userScore P",
-                        fontSize = 13.sp,
-                        color = Color.Gray,
-                        fontFamily = pretendardsemibold
-                    )
-                }
-
-                // 문제 제목
-                Text(
-                    text = "쓰레기와 배출방법을\n올바르게 연결하세요",
-                    fontSize = 24.sp,
+                QuizHeader(
+                    index = index,
+                    totalQuestions = uiState.totalQuestions,
+                    userScore = uiState.userScore,
+                    isLoading = uiState.isLoading,
                     fontFamily = pretendardsemibold,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(top = 20.dp, bottom = 10.dp),
-                    textAlign = TextAlign.Center
+                    navController = navController
                 )
 
-                // 매칭 영역
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 10.dp)
-                            .height(700.dp)
-                    ) {
-                        // 질문 컬럼
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(20.dp)
-                        ) {
-                            Spacer(modifier = Modifier.height(60.dp))
-                            questions.forEach { question ->
-                                Box(
-                                    modifier = Modifier
-                                        .width(140.dp)
-                                        .height(50.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(
-                                            if (selectedQuestion == question) Color(0xFFBBDEFB)
-                                            else Color(0xFFE0F7FA)
-                                        )
-                                        .clickable {
-                                            when {
-                                                // 🆕 이미 매칭된 질문을 클릭한 경우 → 매칭 취소
-                                                matchedPairs.containsKey(question) -> {
-                                                    Log.d("QuizMatching", "🔄 매칭 취소: $question")
-                                                    matchedPairs.remove(question)
-                                                    selectedQuestion = null
-                                                    updateLines()
-                                                }
-                                                // 🆕 현재 선택된 질문을 다시 클릭한 경우 → 선택 해제
-                                                selectedQuestion == question -> {
-                                                    Log.d("QuizMatching", "❌ 질문 선택 해제: $question")
-                                                    selectedQuestion = null
-                                                }
-                                                // 🆕 새로운 질문 선택
-                                                else -> {
-                                                    Log.d("QuizMatching", "👆 질문 선택: $question")
-                                                    selectedQuestion = question
-                                                }
-                                            }
-                                        }
-                                        .onGloballyPositioned { coords ->
-                                            rootCoords.value?.let { root ->
-                                                val rightCenter = coords.positionInWindow() + Offset(coords.size.width.toFloat(), coords.size.height / 2f)
-                                                val relative = rightCenter - root.positionInWindow()
-                                                questionDotCoords[question] = relative
-                                                updateLines()
-                                            }
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = question,
-                                        fontSize = 16.sp,
-                                        fontFamily = pretendardsemibold,
-                                        textAlign = TextAlign.Center
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.CenterEnd)
-                                            .offset(x = (-4).dp)
-                                            .size(6.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.DarkGray)
-                                    )
-                                }
-                            }
-                        }
+                QuizTitle(fontFamily = pretendardsemibold)
 
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        // 답안 컬럼
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(20.dp),
-                            horizontalAlignment = Alignment.End
-                        ) {
-                            Spacer(modifier = Modifier.height(40.dp))
-                            answers.forEach { answer ->
-                                val isMatched = matchedPairs.values.contains(answer)
-
-                                Box(
-                                    modifier = Modifier
-                                        .width(150.dp)
-                                        .height(50.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFFF1F8E9))
-                                        .clickable {
-                                            val selected = selectedQuestion
-
-                                            when {
-                                                // 🆕 이미 매칭된 답안을 클릭한 경우 → 해당 매칭 취소
-                                                isMatched -> {
-                                                    val questionToRemove = matchedPairs.entries.find { it.value == answer }?.key
-                                                    questionToRemove?.let { question ->
-                                                        matchedPairs.remove(question)
-                                                        selectedQuestion = null
-                                                        updateLines()
-                                                    }
-                                                }
-                                                // 🆕 질문이 선택된 상태에서 답안 클릭 → 새로운 매칭 생성
-                                                selected != null -> {
-                                                    // 🔥 핵심 수정: 같은 답안을 사용하던 기존 질문 제거
-                                                    val previousQuestionWithSameAnswer = matchedPairs.entries.find { it.value == answer }?.key
-                                                    if (previousQuestionWithSameAnswer != null) {
-                                                        matchedPairs.remove(previousQuestionWithSameAnswer)
-                                                    }
-
-                                                    // 🔥 현재 선택된 질문의 기존 매칭도 제거
-                                                    if (matchedPairs.containsKey(selected)) {
-                                                        matchedPairs.remove(selected)
-                                                    }
-
-                                                    // 🆕 새로운 매칭 생성
-                                                    matchedPairs[selected] = answer
-                                                    selectedQuestion = null
-                                                    updateLines()
-                                                }
-                                                // 🆕 질문이 선택되지 않은 상태에서 답안 클릭
-                                                else -> {
-                                                    // 아무것도 하지 않음
-                                                }
-                                            }
-                                        }
-                                        .onGloballyPositioned { coords ->
-                                            rootCoords.value?.let { root ->
-                                                val leftCenter = coords.positionInWindow() + Offset(0f, coords.size.height / 2f)
-                                                val relative = leftCenter - root.positionInWindow()
-                                                answerDotCoords[answer] = relative
-                                                updateLines()
-                                            }
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = answer,
-                                        fontSize = 16.sp,
-                                        fontFamily = pretendardsemibold,
-                                        textAlign = TextAlign.Center
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.CenterStart)
-                                            .offset(x = (4).dp)
-                                            .size(6.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.DarkGray)
-                                    )
-                                }
-                            }
-                        }
+                QuizMatchingArea(
+                    questions = questions,
+                    answers = answers,
+                    matchedPairs = matchedPairs,
+                    selectedQuestion = selectedQuestion,
+                    questionDotCoords = questionDotCoords,
+                    answerDotCoords = answerDotCoords,
+                    rootCoords = rootCoords,
+                    fontFamily = pretendardsemibold,
+                    onQuestionClick = onQuestionClick,
+                    onAnswerClick = onAnswerClick,
+                    onUpdateLines = {
+                        updateLines(matchedPairs, questionDotCoords, answerDotCoords, mutableListOf())
                     }
-                }
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun QuizHeader(
+    index: Int,
+    totalQuestions: Int,
+    userScore: Int,
+    isLoading: Boolean,
+    fontFamily: FontFamily,
+    navController: NavHostController
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        IconButton(
+            onClick = { navController.navigate("quiz") },
+            modifier = Modifier.semantics {
+                contentDescription = "퀴즈 목록으로 돌아가기"
+                role = Role.Button
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.ArrowBackIosNew,
+                modifier = Modifier.size(25.dp),
+                tint = Color.Gray,
+                contentDescription = null
+            )
+        }
+
+        Text(
+            text = "${index + 1} / $totalQuestions",
+            fontSize = 18.sp,
+            fontFamily = fontFamily
+        )
+
+        Text(
+            text = if (isLoading) "로딩..." else "$userScore P",
+            fontSize = 13.sp,
+            color = Color.Gray,
+            fontFamily = fontFamily
+        )
+    }
+}
+
+@Composable
+private fun QuizTitle(fontFamily: FontFamily) {
+    Text(
+        text = "쓰레기와 배출방법을\n올바르게 연결하세요",
+        fontSize = 24.sp,
+        fontFamily = fontFamily,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 20.dp, bottom = 10.dp),
+        textAlign = TextAlign.Center
+    )
+}
+
+@Composable
+private fun QuizMatchingArea(
+    questions: List<String>,
+    answers: List<String>,
+    matchedPairs: Map<String, String>,
+    selectedQuestion: String?,
+    questionDotCoords: MutableMap<String, Offset>,
+    answerDotCoords: MutableMap<String, Offset>,
+    rootCoords: MutableState<LayoutCoordinates?>,
+    fontFamily: FontFamily,
+    onQuestionClick: (String) -> Unit,
+    onAnswerClick: (String) -> Unit,
+    onUpdateLines: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp)
+                .height(700.dp)
+        ) {
+            QuestionColumn(
+                questions = questions,
+                matchedPairs = matchedPairs,
+                selectedQuestion = selectedQuestion,
+                questionDotCoords = questionDotCoords,
+                rootCoords = rootCoords,
+                fontFamily = fontFamily,
+                onQuestionClick = onQuestionClick,
+                onUpdateLines = onUpdateLines
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            AnswerColumn(
+                answers = answers,
+                matchedPairs = matchedPairs,
+                answerDotCoords = answerDotCoords,
+                rootCoords = rootCoords,
+                fontFamily = fontFamily,
+                onAnswerClick = onAnswerClick,
+                onUpdateLines = onUpdateLines
+            )
+        }
+    }
+}
+
+@Composable
+private fun RowScope.QuestionColumn(
+    questions: List<String>,
+    matchedPairs: Map<String, String>,
+    selectedQuestion: String?,
+    questionDotCoords: MutableMap<String, Offset>,
+    rootCoords: MutableState<LayoutCoordinates?>,
+    fontFamily: FontFamily,
+    onQuestionClick: (String) -> Unit,
+    onUpdateLines: () -> Unit
+) {
+    Column(
+        modifier = Modifier.weight(1f),
+        verticalArrangement = Arrangement.spacedBy(QuizConstants.SPACING)
+    ) {
+        Spacer(modifier = Modifier.height(60.dp))
+        questions.forEach { question ->
+            QuestionBox(
+                question = question,
+                isSelected = selectedQuestion == question,
+                isMatched = matchedPairs.containsKey(question),
+                questionDotCoords = questionDotCoords,
+                rootCoords = rootCoords,
+                fontFamily = fontFamily,
+                onClick = { onQuestionClick(question) },
+                onUpdateLines = onUpdateLines
+            )
+        }
+    }
+}
+
+@Composable
+private fun RowScope.AnswerColumn(
+    answers: List<String>,
+    matchedPairs: Map<String, String>,
+    answerDotCoords: MutableMap<String, Offset>,
+    rootCoords: MutableState<LayoutCoordinates?>,
+    fontFamily: FontFamily,
+    onAnswerClick: (String) -> Unit,
+    onUpdateLines: () -> Unit
+) {
+    Column(
+        modifier = Modifier.weight(1f),
+        verticalArrangement = Arrangement.spacedBy(QuizConstants.SPACING),
+        horizontalAlignment = Alignment.End
+    ) {
+        Spacer(modifier = Modifier.height(40.dp))
+        answers.forEach { answer ->
+            AnswerBox(
+                answer = answer,
+                isMatched = matchedPairs.values.contains(answer),
+                answerDotCoords = answerDotCoords,
+                rootCoords = rootCoords,
+                fontFamily = fontFamily,
+                onClick = { onAnswerClick(answer) },
+                onUpdateLines = onUpdateLines
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuestionBox(
+    question: String,
+    isSelected: Boolean,
+    isMatched: Boolean,
+    questionDotCoords: MutableMap<String, Offset>,
+    rootCoords: MutableState<LayoutCoordinates?>,
+    fontFamily: FontFamily,
+    onClick: () -> Unit,
+    onUpdateLines: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .width(QuizConstants.QUESTION_BOX_WIDTH)
+            .height(QuizConstants.BOX_HEIGHT)
+            .clip(RoundedCornerShape(QuizConstants.CORNER_RADIUS))
+            .background(
+                when {
+                    isSelected -> Color(0xFFBBDEFB)
+                    isMatched -> Color(0xFFE8F5E8)
+                    else -> Color(0xFFE0F7FA)
+                }
+            )
+            .clickable { onClick() }
+            .semantics {
+                contentDescription = "질문: $question"
+                role = Role.Button
+            }
+            .onGloballyPositioned { coords ->
+                rootCoords.value?.let { root ->
+                    val rightCenter = coords.positionInWindow() + Offset(
+                        coords.size.width.toFloat(),
+                        coords.size.height / 2f
+                    )
+                    val relative = rightCenter - root.positionInWindow()
+                    questionDotCoords[question] = relative
+                    onUpdateLines()
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = question,
+            fontSize = 16.sp,
+            fontFamily = fontFamily,
+            textAlign = TextAlign.Center
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .offset(x = (-4).dp)
+                .size(QuizConstants.DOT_SIZE)
+                .clip(CircleShape)
+                .background(Color.DarkGray)
+        )
+    }
+}
+
+@Composable
+private fun AnswerBox(
+    answer: String,
+    isMatched: Boolean,
+    answerDotCoords: MutableMap<String, Offset>,
+    rootCoords: MutableState<LayoutCoordinates?>,
+    fontFamily: FontFamily,
+    onClick: () -> Unit,
+    onUpdateLines: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .width(QuizConstants.ANSWER_BOX_WIDTH)
+            .height(QuizConstants.BOX_HEIGHT)
+            .clip(RoundedCornerShape(QuizConstants.CORNER_RADIUS))
+            .background(
+                if (isMatched) Color(0xFFE8F5E8) else Color(0xFFF1F8E9)
+            )
+            .clickable { onClick() }
+            .semantics {
+                contentDescription = "답안: $answer"
+                role = Role.Button
+            }
+            .onGloballyPositioned { coords ->
+                rootCoords.value?.let { root ->
+                    val leftCenter = coords.positionInWindow() + Offset(
+                        0f,
+                        coords.size.height / 2f
+                    )
+                    val relative = leftCenter - root.positionInWindow()
+                    answerDotCoords[answer] = relative
+                    onUpdateLines()
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = answer,
+            fontSize = 16.sp,
+            fontFamily = fontFamily,
+            textAlign = TextAlign.Center
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .offset(x = 4.dp)
+                .size(QuizConstants.DOT_SIZE)
+                .clip(CircleShape)
+                .background(Color.DarkGray)
+        )
+    }
+}
+
+// 유틸리티 함수들
+private fun prepareQuizSet(quizList: List<QuizItem>, index: Int): List<QuizItem> {
+    val matchingQuizzes = quizList.filter { it.type == QuizType.MATCHING }
+    val matchingRoundCount = quizList.take(index).count { it.type == QuizType.MATCHING }
+    val startIndex = matchingRoundCount * QuizConstants.QUESTIONS_PER_ROUND
+    val endIndex = minOf(startIndex + QuizConstants.QUESTIONS_PER_ROUND, matchingQuizzes.size)
+
+    return if (startIndex < matchingQuizzes.size) {
+        matchingQuizzes.subList(startIndex, endIndex)
+    } else {
+        emptyList()
+    }
+}
+
+private suspend fun initializeQuiz(
+    context: Context,
+    db: FirebaseFirestore,
+    currentUserId: String?,
+    index: Int,
+    onStateUpdate: (QuizUiState) -> Unit
+) {
+    if (BuildConfig.DEBUG) {
+        Log.d("QuizMatching", "매칭 문제 화면 초기화 - 인덱스: $index")
+    }
+
+    currentUserId?.let { userId ->
+        try {
+            RankingUtils.getUserQuizInfo(db, userId) { score, total ->
+                onStateUpdate(
+                    QuizUiState(
+                        userScore = score,
+                        totalQuestions = total,
+                        isLoading = false
+                    )
+                )
+            }
+
+            val nextQuestionIndex = index + 1
+            RankingUtils.updateLastQuestionIndex(db, userId, nextQuestionIndex)
+
+            context.getSharedPreferences("quiz_prefs", Context.MODE_PRIVATE)
+                .edit()
+                .putInt("last_index", nextQuestionIndex)
+                .apply()
+
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) {
+                Log.e("QuizMatching", "사용자 정보 로드 실패", e)
+            }
+            onStateUpdate(
+                QuizUiState(
+                    isLoading = false,
+                    hasError = true,
+                    errorMessage = "사용자 정보를 불러올 수 없습니다."
+                )
+            )
+        }
+    } ?: run {
+        if (BuildConfig.DEBUG) {
+            Log.w("QuizMatching", "로그인되지 않은 사용자")
+        }
+        onStateUpdate(QuizUiState(isLoading = false))
+    }
+}
+
+private fun handleQuestionClick(
+    question: String,
+    selectedQuestion: String?,
+    matchedPairs: MutableMap<String, String>,
+    onSelectedQuestionChange: (String?) -> Unit,
+    onUpdateLines: () -> Unit
+) {
+    when {
+        matchedPairs.containsKey(question) -> {
+            if (BuildConfig.DEBUG) {
+                Log.d("QuizMatching", "매칭 취소: $question")
+            }
+            matchedPairs.remove(question)
+            onSelectedQuestionChange(null)
+            onUpdateLines()
+        }
+        selectedQuestion == question -> {
+            if (BuildConfig.DEBUG) {
+                Log.d("QuizMatching", "질문 선택 해제: $question")
+            }
+            onSelectedQuestionChange(null)
+        }
+        else -> {
+            if (BuildConfig.DEBUG) {
+                Log.d("QuizMatching", "질문 선택: $question")
+            }
+            onSelectedQuestionChange(question)
+        }
+    }
+}
+
+private fun handleAnswerClick(
+    answer: String,
+    selectedQuestion: String?,
+    matchedPairs: MutableMap<String, String>,
+    onSelectedQuestionChange: (String?) -> Unit,
+    onUpdateLines: () -> Unit
+) {
+    val isMatched = matchedPairs.values.contains(answer)
+
+    when {
+        isMatched -> {
+            val questionToRemove = matchedPairs.entries.find { it.value == answer }?.key
+            questionToRemove?.let { question ->
+                matchedPairs.remove(question)
+                onSelectedQuestionChange(null)
+                onUpdateLines()
+            }
+        }
+        selectedQuestion != null -> {
+            // 기존 매칭 제거
+            val previousQuestionWithSameAnswer = matchedPairs.entries.find { it.value == answer }?.key
+            if (previousQuestionWithSameAnswer != null) {
+                matchedPairs.remove(previousQuestionWithSameAnswer)
+            }
+
+            if (matchedPairs.containsKey(selectedQuestion)) {
+                matchedPairs.remove(selectedQuestion)
+            }
+
+            // 새로운 매칭 생성
+            matchedPairs[selectedQuestion] = answer
+            onSelectedQuestionChange(null)
+            onUpdateLines()
+        }
+    }
+}
+
+private fun updateLines(
+    matchedPairs: Map<String, String>,
+    questionDotCoords: Map<String, Offset>,
+    answerDotCoords: Map<String, Offset>,
+    matchedLines: MutableList<Pair<Offset, Offset>>
+) {
+    matchedLines.clear()
+    matchedPairs.forEach { (question, answer) ->
+        val startRaw = questionDotCoords[question]
+        val endRaw = answerDotCoords[answer]
+        val start = startRaw?.copy(x = startRaw.x - 45.5f)
+        val end = endRaw?.copy(x = endRaw.x + 14.5f)
+        if (start != null && end != null) {
+            matchedLines.add(Pair(start, end))
+        }
+    }
+}
+
+private suspend fun handleMatchingComplete(
+    matchedPairs: Map<String, String>,
+    correctPairs: Map<String, String>,
+    currentQuizSet: List<QuizItem>,
+    navController: NavHostController,
+    index: Int
+) {
+    val correctCount = matchedPairs.count { (question, answer) ->
+        correctPairs[question] == answer
+    }
+
+    if (BuildConfig.DEBUG) {
+        Log.d("QuizMatching", "매칭 완료 - 정답: $correctCount/${matchedPairs.size}")
+    }
+
+    delay(QuizConstants.NAVIGATION_DELAY)
+
+    withContext(Dispatchers.Main) {
+        val matchingResults = matchedPairs.entries.joinToString(",") { (q, a) ->
+            "${q}${QuizConstants.URL_SEPARATOR}${a}"
+        }
+        val encodedResults = java.net.URLEncoder.encode(matchingResults, "UTF-8")
+
+        val quizIds = currentQuizSet.map { it.id }.joinToString(",")
+        val encodedQuizIds = java.net.URLEncoder.encode(quizIds, "UTF-8")
+
+        navController.navigate("quiz_matching_answer/${index}?results=${encodedResults}&quizIds=${encodedQuizIds}")
     }
 }
