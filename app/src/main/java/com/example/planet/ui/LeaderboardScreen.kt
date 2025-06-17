@@ -20,14 +20,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,15 +46,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.planet.R
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.material.BottomSheetScaffold
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.rememberBottomSheetScaffoldState
 import com.example.planet.utils.RankingUtils
 import com.example.planet.utils.UserStateManager
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import com.example.planet.utils.StudentRanking
 import com.example.planet.utils.ClassRanking
 
@@ -117,344 +109,294 @@ fun LeaderboardScreen(navController: NavHostController) {
         }
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFCAEBF1))
+            .verticalScroll(rememberScrollState()) // 🆕 전체 스크롤 가능
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
+        // 탭 선택기
+        Box(
+            modifier = Modifier
+                .padding(top = 64.dp)
+                .width(300.dp)
+                .height(47.dp)
+                .align(Alignment.CenterHorizontally)
+                .border(2.dp, Color(0xFF60B6C2), RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(20.dp))
         ) {
-            // 탭 선택기
-            Box(
+            Row(
                 modifier = Modifier
-                    .padding(top = 64.dp)
-                    .width(300.dp)
-                    .height(47.dp)
-                    .align(Alignment.CenterHorizontally)
-                    .border(2.dp, Color(0xFF60B6C2), RoundedCornerShape(22.dp))
-                    .clip(RoundedCornerShape(20.dp))
+                    .fillMaxSize()
+                    .padding(5.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(5.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val activeColor = Color(0xFF7AC5D3)
-                    val inactiveColor = Color.Gray
+                val activeColor = Color(0xFF7AC5D3)
+                val inactiveColor = Color.Gray
 
-                    listOf("학생별", "학급별").forEach { tab ->
-                        Box(
-                            modifier = Modifier
-                                .width(150.dp)
-                                .height(36.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(if (selectedTab == tab) Color.White else Color.Transparent)
-                                .clickable { selectedTab = tab },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = tab,
-                                textAlign = TextAlign.Center,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = pretendard,
-                                fontSize = 15.sp,
-                                color = if (selectedTab == tab) activeColor else inactiveColor
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 내 등수 카드
-            Card(
-                modifier = Modifier
-                    .width(350.dp)
-                    .height(80.dp)
-                    .padding(horizontal = 24.dp)
-                    .align(Alignment.CenterHorizontally)
-                    .border(2.dp, Color(0xFF60B6C2), RoundedCornerShape(22.dp))
-                    .clip(RoundedCornerShape(20.dp)),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                listOf("학생별", "학급별").forEach { tab ->
                     Box(
                         modifier = Modifier
-                            .size(54.dp)
-                            .background(Color(0xFF60B6C2), shape = RoundedCornerShape(16.dp)),
+                            .width(150.dp)
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(if (selectedTab == tab) Color.White else Color.Transparent)
+                            .clickable { selectedTab = tab },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = when {
-                                isLoading -> "..."
-                                selectedTab == "학생별" && classRankings.size <= 1 -> "👑"
-                                selectedTab == "학급별" && schoolClassRankings.size <= 1 -> "👑"
-                                selectedTab == "학생별" && myScore == 0 -> "🎯"
-                                selectedTab == "학급별" -> "#$myClassRanking"
-                                else -> "#$myRanking"
-                            },
+                            text = tab,
+                            textAlign = TextAlign.Center,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontSize = if ((selectedTab == "학생별" && (classRankings.size <= 1 || myScore == 0)) ||
-                                (selectedTab == "학급별" && schoolClassRankings.size <= 1)) 24.sp else 21.sp,
-                            fontFamily = pretendard
+                            fontFamily = pretendard,
+                            fontSize = 15.sp,
+                            color = if (selectedTab == tab) activeColor else inactiveColor
                         )
                     }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Text(
-                        text = if (isLoading) "로딩중..."
-                        else when (selectedTab) {
-                            "학생별" -> "다른 학급 친구들보다\n${percentileAhead}% 앞서고 있어요!"
-                            "학급별" -> "다른 학급들보다\n${classPercentileAhead}% 앞서고 있어요!"
-                            else -> ""
-                        },
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = pretendard,
-                        fontSize = 13.sp,
-                        lineHeight = 15.sp,
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-
-            when (selectedTab) {
-                "학생별" -> {
-                    LeaderboardScreenWithBottomSheet(
-                        studentRankings = classRankings,
-                        classRankings = emptyList(),
-                        isLoading = isLoading,
-                        myScore = myScore,
-                        isStudentView = true
-                    )
-                }
-                "학급별" -> {
-                    LeaderboardScreenWithBottomSheet(
-                        studentRankings = emptyList(),
-                        classRankings = schoolClassRankings,
-                        isLoading = isLoading,
-                        myScore = myClassScore,
-                        isStudentView = false
-                    )
                 }
             }
         }
-    }
-}
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
-@Composable
-fun LeaderboardScreenWithBottomSheet(
-    studentRankings: List<StudentRanking>,
-    classRankings: List<ClassRanking>,
-    isLoading: Boolean,
-    myScore: Int,
-    isStudentView: Boolean
-) {
-    val sheetState = rememberBottomSheetScaffoldState()
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+        Spacer(modifier = Modifier.height(16.dp))
 
-    BottomSheetScaffold(
-        scaffoldState = sheetState,
-        sheetPeekHeight = 100.dp,
-        sheetContent = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(screenHeight * 0.9f)
-            ) {
-                if (isStudentView) {
-                    LeaderboardList(studentRankings, isLoading)
-                } else {
-                    ClassLeaderboardList(classRankings, isLoading)
-                }
-            }
-        }
-    ) { innerPadding ->
-        Column(
+        // 내 등수 카드
+        Card(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(Color(0xFFCAEBF1))
+                .width(350.dp)
+                .height(80.dp)
+                .padding(horizontal = 24.dp)
+                .align(Alignment.CenterHorizontally)
+                .border(2.dp, Color(0xFF60B6C2), RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(20.dp)),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            // 시상대
-            Box(
+            Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp),
-                contentAlignment = Alignment.BottomCenter
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.podium),
-                    contentDescription = "시상대",
+                Box(
                     modifier = Modifier
-                        .width(300.dp)
-                        .height(200.dp)
-                        .offset(y = 60.dp)
+                        .size(54.dp)
+                        .background(Color(0xFF60B6C2), shape = RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = when {
+                            isLoading -> "..."
+                            selectedTab == "학생별" && classRankings.size <= 1 -> "👑"
+                            selectedTab == "학급별" && schoolClassRankings.size <= 1 -> "👑"
+                            selectedTab == "학생별" && myScore == 0 -> "🎯"
+                            selectedTab == "학급별" -> "#$myClassRanking"
+                            else -> "#$myRanking"
+                        },
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = if ((selectedTab == "학생별" && (classRankings.size <= 1 || myScore == 0)) ||
+                            (selectedTab == "학급별" && schoolClassRankings.size <= 1)) 24.sp else 21.sp,
+                        fontFamily = pretendard
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Text(
+                    text = if (isLoading) "로딩중..."
+                    else when (selectedTab) {
+                        "학생별" -> "다른 학급 친구들보다\n${percentileAhead}% 앞서고 있어요!"
+                        "학급별" -> "다른 학급들보다\n${classPercentileAhead}% 앞서고 있어요!"
+                        else -> ""
+                    },
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = pretendard,
+                    fontSize = 13.sp,
+                    lineHeight = 15.sp,
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth()
                 )
+            }
+        }
 
-                // 상위 3명/3개 학급 표시
-                if (!isLoading) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .offset(y = (-120).dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        if (isStudentView && studentRankings.isNotEmpty()) {
-                            // 학생별 시상대
-                            if (studentRankings.size >= 2) {
-                                PodiumItem(
-                                    name = studentRankings[1].name,
-                                    score = studentRankings[1].score,
-                                    rank = 2,
-                                    modifier = Modifier.offset(x = 10.dp),
-                                    isClass = false
-                                )
-                            }
+        Spacer(modifier = Modifier.height(16.dp))
 
-                            if (studentRankings.isNotEmpty()) {
-                                PodiumItem(
-                                    name = studentRankings[0].name,
-                                    score = studentRankings[0].score,
-                                    rank = 1,
-                                    isClass = false
-                                )
-                            }
+        // 시상대 영역
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp), // 🆕 고정 높이
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.podium),
+                contentDescription = "시상대",
+                modifier = Modifier
+                    .width(300.dp)
+                    .height(200.dp)
+                    .offset(y = 50.dp)
+            )
 
-                            if (studentRankings.size >= 3) {
-                                PodiumItem(
-                                    name = studentRankings[2].name,
-                                    score = studentRankings[2].score,
-                                    rank = 3,
-                                    modifier = Modifier.offset(x = (-10).dp),
-                                    isClass = false
-                                )
-                            }
-                        } else if (!isStudentView && classRankings.isNotEmpty()) {
-                            // 학급별 시상대
-                            if (classRankings.size >= 2) {
-                                ClassPodiumItem(
-                                    classRanking = classRankings[1],
-                                    rank = 2,
-                                    modifier = Modifier.offset(x = 10.dp)
-                                )
-                            }
-
-                            if (classRankings.isNotEmpty()) {
-                                ClassPodiumItem(
-                                    classRanking = classRankings[0],
-                                    rank = 1
-                                )
-                            }
-
-                            if (classRankings.size >= 3) {
-                                ClassPodiumItem(
-                                    classRanking = classRankings[2],
-                                    rank = 3,
-                                    modifier = Modifier.offset(x = (-10).dp)
-                                )
-                            }
-                        } else {
-                            // 로딩 중이거나 데이터가 없을 때
-                            PodiumItem(name = "곧 채워질", score = 0, rank = 2, modifier = Modifier.offset(x = 10.dp), isClass = false)
-                            PodiumItem(name = if (isLoading) "로딩중" else "당신", score = myScore, rank = 1, isClass = false)
-                            PodiumItem(name = "예정", score = 0, rank = 3, modifier = Modifier.offset(x = (-10).dp), isClass = false)
+            // 상위 3명/3개 학급 표시
+            if (!isLoading) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .offset(y = (-120).dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    if (selectedTab == "학생별" && classRankings.isNotEmpty()) {
+                        // 학생별 시상대
+                        if (classRankings.size >= 2) {
+                            PodiumItem(
+                                name = classRankings[1].name,
+                                score = classRankings[1].score,
+                                rank = 2,
+                                modifier = Modifier.offset(x = 10.dp),
+                                isClass = false
+                            )
                         }
-                    }
-                } else {
-                    // 로딩 중
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .offset(y = (-120).dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
+
+                        if (classRankings.isNotEmpty()) {
+                            PodiumItem(
+                                name = classRankings[0].name,
+                                score = classRankings[0].score,
+                                rank = 1,
+                                isClass = false
+                            )
+                        }
+
+                        if (classRankings.size >= 3) {
+                            PodiumItem(
+                                name = classRankings[2].name,
+                                score = classRankings[2].score,
+                                rank = 3,
+                                modifier = Modifier.offset(x = (-10).dp),
+                                isClass = false
+                            )
+                        }
+                    } else if (selectedTab == "학급별" && schoolClassRankings.isNotEmpty()) {
+                        // 학급별 시상대
+                        if (schoolClassRankings.size >= 2) {
+                            ClassPodiumItem(
+                                classRanking = schoolClassRankings[1],
+                                rank = 2,
+                                modifier = Modifier.offset(x = 10.dp)
+                            )
+                        }
+
+                        if (schoolClassRankings.isNotEmpty()) {
+                            ClassPodiumItem(
+                                classRanking = schoolClassRankings[0],
+                                rank = 1
+                            )
+                        }
+
+                        if (schoolClassRankings.size >= 3) {
+                            ClassPodiumItem(
+                                classRanking = schoolClassRankings[2],
+                                rank = 3,
+                                modifier = Modifier.offset(x = (-10).dp)
+                            )
+                        }
+                    } else {
+                        // 로딩 중이거나 데이터가 없을 때
                         PodiumItem(name = "곧 채워질", score = 0, rank = 2, modifier = Modifier.offset(x = 10.dp), isClass = false)
-                        PodiumItem(name = "로딩중", score = myScore, rank = 1, isClass = false)
+                        PodiumItem(name = if (isLoading) "로딩중" else "당신", score = if (selectedTab == "학생별") myScore else myClassScore, rank = 1, isClass = false)
                         PodiumItem(name = "예정", score = 0, rank = 3, modifier = Modifier.offset(x = (-10).dp), isClass = false)
                     }
                 }
+            } else {
+                // 로딩 중
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .offset(y = (-120).dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    PodiumItem(name = "곧 채워질", score = 0, rank = 2, modifier = Modifier.offset(x = 10.dp), isClass = false)
+                    PodiumItem(name = "로딩중", score = if (selectedTab == "학생별") myScore else myClassScore, rank = 1, isClass = false)
+                    PodiumItem(name = "예정", score = 0, rank = 3, modifier = Modifier.offset(x = (-10).dp), isClass = false)
+                }
             }
+        }
 
-            Spacer(modifier = Modifier.height(12.dp))
+        // 🆕 포디움 하단 선에 맞춰서 리스트 시작
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFE0F7FA), shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                .padding(horizontal = 16.dp, vertical =  20.dp)
+        ) {
+            when (selectedTab) {
+                "학생별" -> {
+                    LeaderboardList(classRankings, isLoading)
+                }
+                "학급별" -> {
+                    ClassLeaderboardList(schoolClassRankings, isLoading)
+                }
+            }
         }
     }
 }
 
 @Composable
 fun ClassLeaderboardList(rankings: List<ClassRanking>, isLoading: Boolean) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFE0F7FA), shape = RoundedCornerShape(24.dp))
-            .padding(horizontal = 16.dp, vertical = 15.dp)
-    ) {
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+    if (isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("로딩중...", fontSize = 16.sp, color = Color.Gray)
+        }
+    } else if (rankings.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Text("로딩중...", fontSize = 16.sp, color = Color.Gray)
+                Text("🏫", fontSize = 48.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "학교의 첫 번째 학급이에요!",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF546A6E)
+                )
+                Text(
+                    "학급 친구들과 함께 퀴즈를 풀어보세요",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
             }
-        } else if (rankings.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text("🏫", fontSize = 48.sp)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "학교의 첫 번째 학급이에요!",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF546A6E)
-                    )
-                    Text(
-                        "학급 친구들과 함께 퀴즈를 풀어보세요",
-                        fontSize = 14.sp,
-                        color = Color.Gray
-                    )
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                itemsIndexed(rankings) { index, classRanking ->
-                    ClassLeaderboardRow(
-                        rank = classRanking.rank,
-                        grade = classRanking.grade,
-                        classNumber = classRanking.classNumber,
-                        totalScore = classRanking.totalScore,
-                        studentCount = classRanking.studentCount,
-                        color = getClassColor(index),
-                        isMyClass = classRanking.isCurrentClass
-                    )
-                }
+        }
+    } else {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            rankings.forEachIndexed { index, classRanking ->
+                ClassLeaderboardRow(
+                    rank = classRanking.rank,
+                    grade = classRanking.grade,
+                    classNumber = classRanking.classNumber,
+                    totalScore = classRanking.totalScore,
+                    studentCount = classRanking.studentCount,
+                    color = getClassColor(index),
+                    isMyClass = classRanking.isCurrentClass
+                )
             }
         }
     }
@@ -462,58 +404,53 @@ fun ClassLeaderboardList(rankings: List<ClassRanking>, isLoading: Boolean) {
 
 @Composable
 fun LeaderboardList(rankings: List<StudentRanking>, isLoading: Boolean) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFE0F7FA), shape = RoundedCornerShape(24.dp))
-            .padding(horizontal = 16.dp, vertical = 15.dp)
-    ) {
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+    if (isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("로딩중...", fontSize = 16.sp, color = Color.Gray)
+        }
+    } else if (rankings.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Text("로딩중...", fontSize = 16.sp, color = Color.Gray)
+                Text("🎓", fontSize = 48.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "학급의 첫 번째 학생이에요!",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF546A6E)
+                )
+                Text(
+                    "퀴즈를 풀고 점수를 올려보세요",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
             }
-        } else if (rankings.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text("🎓", fontSize = 48.sp)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "학급의 첫 번째 학생이에요!",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF546A6E)
-                    )
-                    Text(
-                        "퀴즈를 풀고 점수를 올려보세요",
-                        fontSize = 14.sp,
-                        color = Color.Gray
-                    )
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                itemsIndexed(rankings) { index, student ->
-                    LeaderboardRow(
-                        rank = student.rank,
-                        name = student.name,
-                        score = student.score,
-                        color = getStudentColor(index),
-                        isMe = student.isCurrentUser
-                    )
-                }
+        }
+    } else {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            rankings.forEachIndexed { index, student ->
+                LeaderboardRow(
+                    rank = student.rank,
+                    name = student.name,
+                    score = student.score,
+                    color = getStudentColor(index),
+                    isMe = student.isCurrentUser
+                )
             }
         }
     }
@@ -672,7 +609,7 @@ fun ClassLeaderboardRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(85.dp)
+            .height(75.dp)
             .clip(RoundedCornerShape(32.dp))
             .background(if (isMyClass) Color(0xFFE3F2FD) else Color.White)
             .border(
@@ -698,7 +635,7 @@ fun ClassLeaderboardRow(
         // 학급 표시 색상 원
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(45.dp)
                 .background(color, CircleShape),
             contentAlignment = Alignment.Center
         ) {
@@ -757,7 +694,7 @@ fun LeaderboardRow(rank: Int, name: String, score: Int, color: Color, isMe: Bool
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(85.dp)
+            .height(75.dp)
             .clip(RoundedCornerShape(32.dp))
             .background(if (isMe) Color(0xFFE3F2FD) else Color.White)
             .border(
@@ -783,7 +720,7 @@ fun LeaderboardRow(rank: Int, name: String, score: Int, color: Color, isMe: Bool
         // 프로필 색상 원
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(45.dp)
                 .background(color, CircleShape)
         )
 

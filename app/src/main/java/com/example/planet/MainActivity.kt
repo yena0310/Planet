@@ -131,7 +131,9 @@ class MainActivity : ComponentActivity() {
                         containerColor = Color.Transparent, //배경 투명하게
                         bottomBar = {
                             val currentRoute = getCurrentRoute(navController)
-                            if (currentRoute != "camera") {
+                            // 카메라와 퀴즈 관련 화면에서 네비게이션 숨김
+                            if (currentRoute != "camera" &&
+                                !currentRoute.startsWith("quiz_")) {
                                 BottomNavigationBar(
                                     selectedItem = currentRoute,
                                     onItemClick = { route -> navController.navigate(route) }
