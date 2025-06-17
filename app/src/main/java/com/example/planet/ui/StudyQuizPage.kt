@@ -233,42 +233,6 @@ fun StudyQuizPage(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ======= 틀린문제 복습 박스 =======
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp)
-                .customShadow()
-                .clickable {navController.navigate("quiz_question/61")}
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(start = 30.dp),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "틀렸던 문제를 다시 풀어볼까요?",
-                    color = Color(0xFF546A6E),
-                    fontSize = 18.sp,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontFamily = pretendardbold
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-
-                Icon(
-                    imageVector = Icons.Default.KeyboardDoubleArrowRight,
-                    contentDescription = "Next",
-                    tint = Color(0xFF546A6E)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         // ===== 흰색 박스 =====
         Box(
             modifier = Modifier
